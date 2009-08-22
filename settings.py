@@ -80,6 +80,13 @@ INSTALLED_APPS = (
     'django.contrib.admin',
 )
 
+AUTH_PROFILE_MODULE = 'users.Profile'
+
+AUTHENTICATION_BACKENDS = (
+    'email_auth.EmailAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
 try:
     from local_settings import *
 except ImportError:

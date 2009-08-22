@@ -1,0 +1,43 @@
+/*
+ * CSS Style for Wombat Mail
+ * Copyright 2009 Martin Pieuchot
+ */
+
+body {
+  font-size: 72%;
+  font-family: 'Lucida Grande', Verdana, Arial, Sans-Serif;
+  background-color: white;
+  margin: 0;
+  padding: 0;
+  color: #333;
+}
+
+img {border: 0;}
+
+a {color: #06c; text-decoration: none;}
+a:hover {color: #f17912;}
+
+#container {padding: 1em;}
+
+.form-login {
+  padding: 1em;
+  width: 25em;
+  border: 1px solid #959596;
+  background-color: #efeeee;
+}
+
+.form-row {
+  overflow: hidden;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.submit-row {margin: 0 2em; text-align: right;}
+
+label {
+  font-weight: normal !important;
+  display: block;
+  padding: 3px 10px 0 0;
+  float: left;
+  width: 8em;
+}

@@ -1,0 +1,17 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>{% block title %}Wombat{% endblock %}</title>
+  <link rel="stylesheet" type="text/css" media="screen" href="{{ MEDIA_URL }}css/style.css">
+  {% block extrahead %}{% endblock %}
+  {% block blockbots %}<meta name="robots" content="NONE,NOARCHIVE" />{% endblock %}
+</head>
+
+<body>
+  <div id="container">
+  {% block content %}
+  {% endblock %}
+  </div> <!-- #container -->
+</body>
+</html>

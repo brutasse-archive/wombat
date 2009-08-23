@@ -1,18 +1,17 @@
-from django.conf.urls.defaults import *
-from django.views.generic.simple import direct_to_template
+# -*- coding: utf-8 -*-
 
-# Uncomment the next two lines to enable the admin:
+from django.conf.urls.defaults import *
+#from django.views.generic.simple import direct_to_template
+
 from django.contrib import admin
 admin.autodiscover()
 
+from wombat.users.views import login, inbox
+
 urlpatterns = patterns('',
-    (r'^$', direct_to_template, {'template': 'login.html'}),
-
-    # Uncomment the admin/doc line below and add 'django.contrib.admindocs'
-    # to INSTALLED_APPS to enable admin documentation:
-    # (r'^admin/doc/', include('django.contrib.admindocs.urls')),
-
-    # Uncomment the next line to enable the admin:
+    (r'^$', login),
+    (r'^logout/', login),
+    (r'^mail/', inbox),
     (r'^admin/(.*)', admin.site.root),
 )
 

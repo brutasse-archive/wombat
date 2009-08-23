@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Wombat | {% trans 'Inbox' %} {% if mail_nb %}({{ mail_nb }}){% endif %}{% endblock %}
+
+{% block content %}
+<h1>Inbox</h1>
+
+<p>{{ user.email }} | <a href="/logout/">logout</a></p>
+
+{% if err_msg %}
+  <p class="errornote">{{ err_msg }}</p>
+{% endif %}
+
+</div>
+{% endblock %}

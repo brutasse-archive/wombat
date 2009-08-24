@@ -17,27 +17,20 @@ img {border: 0;}
 a {color: #06c; text-decoration: none;}
 a:hover {color: #f17912;}
 
-#container {padding: 1em;}
+#container {margin: 0; padding: 0;}
+#header {padding: .5em 1em; border-bottom: 1px solid #959596;}
+#content {padding: 1em 2em;}
+#footer {font-size: 0.9em; text-align: center;}
 
 .form-login {
-  padding: 1em;
-  width: 25em;
+  width: 250px;
   border: 1px solid #959596;
   background-color: #efeeee;
 }
 
-.form-row {
-  overflow: hidden;
-  padding: 8px 12px;
-  border-bottom: 1px solid #eee;
-}
+.form-row, .submit-row {overflow: hidden; padding: 8px 12px;}
+label {display: block; padding: 3px 10px 0 0; float: left; width: 5em;}
 
-.submit-row {margin: 0 2em; text-align: right;}
-
-label {
-  font-weight: normal !important;
-  display: block;
-  padding: 3px 10px 0 0;
-  float: left;
-  width: 8em;
-}
+/* top & right must be the equal to header's padding. */
+#options {position: absolute; top: .5em; right: 1em;}
+#search input {}

@@ -10,8 +10,19 @@
 
 <body>
   <div id="container">
-  {% block content %}
-  {% endblock %}
+    <div id="header">
+    {% block header %}
+    {% endblock %}
+    </div> <!-- #header -->
+    <div id="content">
+      {% block content %}
+      {% endblock %}
+    </div> <!-- #header -->
+    <div id="footer">
+    {% block footer %}
+      <p>&copy;2009 Wombat Mail - <a>License</a> - <a>Website</a></p>
+    {% endblock %}
+    </div> <!-- #footer -->
   </div> <!-- #container -->
 </body>
 </html>

@@ -1,0 +1,22 @@
+{% extends "mail.html" %}
+{% load i18n %}
+
+{% block title %}Wombat | {% trans 'Settings' %}{% endblock %}
+
+
+{% block panel %}
+<div id="settings" class="panel">
+  <ul class="submenu">
+    <li><a>General</a></li>
+    <li><a>Accounts</a></li>
+    <li><a>Labels</a></li>
+    <li><a>Filters</a></li>
+  </ul>
+  <div class="form">
+  <form action="{{ app_path }}" method="post">
+    {{ form.as_p }}
+    <p><label>&nbsp;</label><input type="submit" value="{% trans 'Save Changes' %}" /></p>
+  </form>
+  </div>
+</div>
+{% endblock %}

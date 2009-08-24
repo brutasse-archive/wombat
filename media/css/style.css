@@ -20,7 +20,7 @@ a:hover {color: #f17912;}
 #container {margin: 0; padding: 0;}
 #header {padding: .5em 1em; border-bottom: 1px solid #959596;}
 #content {padding: 1em 2em;}
-#footer {font-size: 0.9em; text-align: center;}
+#footer {padding: 1em 0; font-size: 0.9em; text-align: center; clear: both;}
 
 .form-login {
   width: 250px;
@@ -28,9 +28,30 @@ a:hover {color: #f17912;}
   background-color: #efeeee;
 }
 
-.form-row, .submit-row {overflow: hidden; padding: 8px 12px;}
-label {display: block; padding: 3px 10px 0 0; float: left; width: 5em;}
+label {display: block; padding: 3px 10px 0 10px; float: left; width: 70px;}
 
 /* top & right must be the equal to header's padding. */
 #options {position: absolute; top: .5em; right: 1em;}
-#search input {}
+
+/*
+ * Panel
+ */
+
+.panel {
+  width: 80%;
+  float: right;
+  border-radius: 10px; /* CSS 3 */
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+}
+
+ul.submenu {}
+ul.submenu li {display: inline;}
+
+/*
+ * Settings panel
+ */
+#settings {color: #000; background-color: #f17912;}
+
+#settings a {color: #fff;}
+#settings a:hover {color: #000;}

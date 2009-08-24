@@ -20,6 +20,9 @@
 {% endblock %}
 
 {% block content %}
+{% block panel %}
+{% endblock %}
+
 <h1>Inbox</h1>
 
 {% if err_msg %}
@@ -28,7 +31,7 @@
 
 <ul id="menu">
   <li><a>Compose</a></li>
-  <li><a>Inbox</a></li>
+  <li><a href="/mail/">Inbox</a></li>
   <li><a>Starred</a></li>
   <li><a>Sent</a></li>
   <li><a>Draft</a></li>
@@ -37,5 +40,4 @@
   <li><a>Contacts</a></li>
   <li><a>Tasks</a></li>
 </ul>
-</div>
 {% endblock %}

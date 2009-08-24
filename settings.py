@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os.path
 
 HERE = os.path.dirname(__file__)
@@ -60,8 +62,9 @@ TEMPLATE_LOADERS = (
 )
 
 MIDDLEWARE_CLASSES = (
-    'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
 )
 
@@ -87,6 +90,15 @@ AUTHENTICATION_BACKENDS = (
     'email_auth.EmailAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
 )
+
+# Dummy translation 'ugettext()' function
+_ = lambda s: s
+
+# Language available
+LANGUAGES = (
+  ('en', _('English')),
+)
+
 
 try:
     from local_settings import *

@@ -6,12 +6,13 @@ from django.conf.urls.defaults import *
 from django.contrib import admin
 admin.autodiscover()
 
-from wombat.users.views import login, inbox
+from wombat.users.views import login, inbox, settings
 
 urlpatterns = patterns('',
     (r'^$', login),
     (r'^logout/', login),
     (r'^mail/', inbox),
+    (r'^settings/', settings),
     (r'^admin/(.*)', admin.site.root),
 )
 

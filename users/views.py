@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from django.contrib import auth
-from django.shortcuts import render_to_response
-from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+from wombat.shortcuts import render
 
 
 def login(request):
@@ -18,13 +18,13 @@ def login(request):
         if user is not None and user.is_active:
             # Correct password, and the user is marked "active"
             auth.login(request, user)
-            return HttpResponseRedirect('/mail/')
+            return redirect('/mail/')
         else:
             # TODO: Add translation string.
             err = "The username or password you entered is incorrect."
     else:
         err = ''
-    return render_to_response('login.html', {'err_msg': err})
+    return render(request, 'login.html', {'err_msg': err})
 
 
 def logout(request):
@@ -33,9 +33,9 @@ def logout(request):
         "Thanks for your visit" page.
     """
     auth.logout(request)
-    return HttpResponseRedirect("/")
+    return redirect('/')
 
 
 @login_required
 def inbox(request):
-    return render_to_response('mail.html', {'user': request.user})
+    return render(request, 'mail.html', {'user': request.user})

@@ -3,14 +3,39 @@
 
 {% block title %}Wombat | {% trans 'Inbox' %} {% if mail_nb %}({{ mail_nb }}){% endif %}{% endblock %}
 
+
+{% block header %}
+<div id="search">
+  <form action="/search/" method="post" id="search-form">
+  <input type="text" name="search" id="id_search" size="20" value="" />
+  <input type="submit" value="Search" />
+</form>
+</div>
+
+<span id="options">
+  <b>{{ user.email }}</b> |
+  <a href="/settings/">Settings</a> |
+  <a href="/logout/">Log out</a></p>
+</span>
+{% endblock %}
+
 {% block content %}
 <h1>Inbox</h1>
-
-<p>{{ user.email }} | <a href="/logout/">logout</a></p>
 
 {% if err_msg %}
   <p class="errornote">{{ err_msg }}</p>
 {% endif %}
 
+<ul id="menu">
+  <li><a>Compose</a></li>
+  <li><a>Inbox</a></li>
+  <li><a>Starred</a></li>
+  <li><a>Sent</a></li>
+  <li><a>Draft</a></li>
+  <li><a>Trash</a></li>
+  <li>&nbsp;</li>
+  <li><a>Contacts</a></li>
+  <li><a>Tasks</a></li>
+</ul>
 </div>
 {% endblock %}

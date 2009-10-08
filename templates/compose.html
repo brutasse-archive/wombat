@@ -1,0 +1,25 @@
+{% extends "mail.html" %}
+{% load i18n %}
+
+{% block title %}Wombat | {% trans 'Compose' %}{% endblock %}
+
+
+{% block panel %}
+<div class="panel">
+  <div class="form">
+  <form action="{{ app_path }}" method="post">
+    <p>
+      <label>&nbsp;</label><input type="submit" value="{% trans 'Send' %}" />
+      <label>&nbsp;</label><input type="submit" value="{% trans 'Save' %}" />
+      <label>&nbsp;</label><input type="submit" value="{% trans 'Discard' %}" />
+    </p>
+    {{ form.as_p }}
+    <p>
+      <label>&nbsp;</label><input type="submit" value="{% trans 'Send' %}" />
+      <label>&nbsp;</label><input type="submit" value="{% trans 'Save' %}" />
+      <label>&nbsp;</label><input type="submit" value="{% trans 'Discard' %}" />
+    </p>
+  </form>
+  </div>
+</div>
+{% endblock %}

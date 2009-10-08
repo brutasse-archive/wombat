@@ -7,11 +7,13 @@ from django.contrib import admin
 admin.autodiscover()
 
 from wombat.users.views import login, inbox, settings
+from wombat.mail.views import compose
 
 urlpatterns = patterns('',
     (r'^$', login),
     (r'^logout/', login),
     (r'^mail/', inbox),
+    (r'^compose/', compose),
     (r'^settings/', settings),
     (r'^admin/(.*)', admin.site.root),
 )

@@ -3,29 +3,37 @@
 
 {% block title %}Wombat | {% trans 'Free your webmail' %}{% endblock %}
 
+{% block header %}
+<div id="sidebar">
+  <div class="form" id="login-form">
+  <form action="{{ app_path }}" method="post">
+    <p>
+      <label for="id_email">{% trans 'Email:' %}</label>
+      <input type="text" name="email" id="id_email" />
+    </p>
+    <p>
+      <label for="id_password">{% trans 'Password:' %}</label>
+      <input type="password" name="password" id="id_password" />
+    </p>
+    <p>
+      <label>&nbsp;</label>
+      <input type="submit" value="{% trans 'Log in' %}" />
+    </p>
+  </form>
+  </div>
+</div>
+
+<script type="text/javascript">
+document.getElementById('id_email').focus()
+</script>
+{% endblock %}
+
 {% block content %}
-<h1>Wombat - Login</h1>
+<h1>Wombat</h1>
+  <h2 class="title">Login</h2>
 <p>{% trans 'Please provide login and password information to access your mail-account.' %}</p>
 
 {% if err_msg %}
   <p class="errornote">{{ err_msg }}</p>
 {% endif %}
-
-<div class="form-login">
-<form action="{{ app_path }}" method="post" id="login-form">
-  <div class="form-row">
-    <label for="id_email">{% trans 'Email:' %}</label> <input type="text" name="email" id="id_email" />
-  </div>
-  <div class="form-row">
-    <label for="id_password">{% trans 'Password:' %}</label> <input type="password" name="password" id="id_password" />
-  </div>
-  <div class="submit-row">
-    <label>&nbsp;</label><input type="submit" value="{% trans 'Log in' %}" />
-  </div>
-</form>
-
-<script type="text/javascript">
-document.getElementById('id_email').focus()
-</script>
-</div>
 {% endblock %}

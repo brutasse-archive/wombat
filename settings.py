@@ -82,6 +82,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.admin',
     'wombat.users',
+    'wombat.mail',
 )
 
 AUTH_PROFILE_MODULE = 'users.Profile'

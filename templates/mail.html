@@ -5,18 +5,20 @@
 
 
 {% block header %}
-<div id="search">
-  <form action="/search/" method="post" id="search-form">
-  <input type="text" name="search" id="id_search" size="20" value="" />
-  <input type="submit" value="Search" />
-</form>
-</div>
+<div id="header">
+  <div id="search">
+    <form action="/search/" method="post" id="search-form">
+    <input type="text" name="search" id="id_search" size="20" value="" />
+    <input type="submit" value="Search" />
+  </form>
+  </div>
 
-<span id="options">
-  <b>{{ user.email }}</b> |
-  <a href="/settings/">Settings</a> |
-  <a href="/logout/">Log out</a></p>
-</span>
+  <span id="options">
+    <b>{{ user.email }}</b> |
+    <a href="/settings/">Settings</a> |
+    <a href="/logout/">Log out</a></p>
+  </span>
+</div> <!-- #header -->
 {% endblock %}
 
 {% block content %}
@@ -30,7 +32,7 @@
 {% endif %}
 
 <ul id="menu">
-  <li><a>Compose</a></li>
+  <li><a href="/compose/">Compose</a></li>
   <li><a href="/mail/">Inbox</a></li>
   <li><a>Starred</a></li>
   <li><a>Sent</a></li>

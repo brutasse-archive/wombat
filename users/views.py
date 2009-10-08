@@ -41,7 +41,6 @@ def logout(request):
 def inbox(request):
     return render(request, 'mail.html', {'user': request.user})
 
-
 @login_required
 def settings(request):
     profile = request.user.get_profile()

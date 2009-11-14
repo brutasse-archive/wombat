@@ -1,0 +1,17 @@
+{% extends "base_settings.html" %}
+{% load i18n %}
+
+{% block title %}Wombat | {% trans 'Accounts' %}{% endblock %}
+
+{% block form %}
+	<div class="form">
+		<ul>
+			{% for account in accounts %}
+			<li>{{ accounts }}</li>
+			{% empty %}
+			<li>You don't have any account yet</li>
+			{% endfor %}
+		</ul>
+		<p><a href="{% url add_account %}">Add an account</a></p>
+  </div>
+{% endblock %}

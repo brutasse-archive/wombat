@@ -6,10 +6,10 @@
 {% block header %}
 <div id="sidebar">
   <div class="form" id="login-form">
-  <form action="{{ app_path }}" method="post">
+  <form action="{% url login %}" method="post">
     <p>
-      <label for="id_email">{% trans 'Email:' %}</label>
-      <input type="text" name="email" id="id_email" />
+      <label for="id_username">{% trans 'Email:' %}</label>
+      <input type="text" name="username" id="id_username" />
     </p>
     <p>
       <label for="id_password">{% trans 'Password:' %}</label>
@@ -24,7 +24,7 @@
 </div>
 
 <script type="text/javascript">
-document.getElementById('id_email').focus()
+document.getElementById('id_username').focus()
 </script>
 {% endblock %}
 
@@ -33,7 +33,7 @@ document.getElementById('id_email').focus()
   <h2 class="title">Login</h2>
 <p>{% trans 'Please provide login and password information to access your mail-account.' %}</p>
 
-{% if err_msg %}
-  <p class="errornote">{{ err_msg }}</p>
+{% if form.errors %}
+<p class="errornote">{{ form.non_field_errors.as_text }}</p>
 {% endif %}
 {% endblock %}

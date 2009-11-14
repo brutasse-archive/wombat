@@ -81,10 +81,12 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.admin',
-    'wombat.users',
-    'wombat.mail',
+    'users',
+    'mail',
 )
 
+LOGIN_URL = '/'
+LOGIN_REDIRECT_URL = '/mail/'
 AUTH_PROFILE_MODULE = 'users.Profile'
 
 AUTHENTICATION_BACKENDS = (

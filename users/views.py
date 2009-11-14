@@ -1,31 +1,26 @@
 # -*- coding: utf-8 -*-
 
-from django.contrib import auth
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
-from wombat.shortcuts import render
-from wombat.users.models import ProfileForm
+from django.core.urlresolvers import reverse
+from django.db import transaction
+
+from shortcuts import render
+from users.forms import ProfileForm, IMAPForm, SMTPForm
+from users.models import Account, SMTP, IMAP
 
 
-def login(request):
+def login(request, *a, **kw):
     """
-        Login method from The Django Book:
-            http://www.djangobook.com/en/2.0/chapter14/
+    If the user is already logged in, we redirect him to his inbox. If not,
+    falling back to contrib.auth's built-in login view..
     """
-    if request.method == 'POST':
-        username = request.POST.get('email', '')
-        password = request.POST.get('password', '')
-        user = auth.authenticate(username=username, password=password)
-        if user is not None and user.is_active:
-            # Correct password, and the user is marked "active"
-            auth.login(request, user)
-            return redirect('/mail/')
-        else:
-            # TODO: Add translation string.
-            err = "The username or password you entered is incorrect."
-    else:
-        err = ''
-    return render(request, 'login.html', {'err_msg': err})
+
+    if request.user.is_authenticated():
+        return redirect(reverse('inbox'))
+
+    return auth_views.login(request, *a, **kw)
 
 
 def logout(request):
@@ -33,13 +28,10 @@ def logout(request):
         Return to the index after a logout, we don't care about a
         "Thanks for your visit" page.
     """
-    auth.logout(request)
+    from django.contrib.auth import logout
+    logout(request)
     return redirect('/')
 
-
-@login_required
-def inbox(request):
-    return render(request, 'mail.html', {'user': request.user})
 
 @login_required
 def settings(request):
@@ -50,7 +42,7 @@ def settings(request):
             form.save()
             # TODO: Display a javascript "Modification saved"
             # For the moment, redirect to the inbox
-            return redirect('/mail/')
+            return redirect(reverse('inbox'))
         else:
             # TODO: handle correctly the error and translate the message
             err = "Incorrect config..."
@@ -60,3 +52,40 @@ def settings(request):
     return render(request, 'settings.html', {
         'user': request.user, 'form': form, 'err_msg': err,
     })
+
+@login_required
+def accounts(request):
+    accounts = request.user.get_profile().accounts.all()
+    return render(request, 'users/accounts.html', {'accounts': accounts})
+
+@login_required
+@transaction.commit_on_success
+def add_account(request):
+    if request.method == 'POST':
+        smtp_form = SMTPForm(data=request.POST, prefix='smtp')
+        imap_form = IMAPForm(data=request.POST, prefix='imap')
+        if all([form.is_valid() for form in (smtp_form, imap_form)]):
+            # Create an Account, attach it an IMAP and an SMTP instance.
+            account = Account(profile=request.user.get_profile())
+
+            imap = IMAP(**imap_form.cleaned_data)
+            smtp = SMTP(**smtp_form.cleaned_data)
+
+            success = imap.check_credentials()
+            if success:
+                imap.save()
+                smtp.save()
+                account.imap = imap
+                account.smtp = smtp
+                account.save()
+
+
+            context = {'imap': imap_form, 'smtp': smtp_form,
+                       'success': success, 'submitted': True}
+
+    else:
+        imap_form = IMAPForm(prefix='imap')
+        smtp_form = SMTPForm(prefix='smtp')
+        context = {'imap': imap_form, 'smtp': smtp_form}
+
+    return render(request, 'users/add_account.html', context)

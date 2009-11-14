@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 
 from django.conf.urls.defaults import *
-#from django.views.generic.simple import direct_to_template
-
 from django.contrib import admin
 admin.autodiscover()
 
-from wombat.users.views import login, inbox, settings
-from wombat.mail.views import compose
-
 urlpatterns = patterns('',
-    (r'^$', login),
-    (r'^logout/', login),
-    (r'^mail/', inbox),
-    (r'^compose/', compose),
-    (r'^settings/', settings),
-    (r'^admin/(.*)', admin.site.root),
+    url(r'^$', 'users.views.login',
+        {'template_name': 'login.html'}, name='login'),
+
+    # Enabling the admin
+    url(r'^admin/', include(admin.site.urls)),
+
+    # Users: wombat settings and preference, accounts settings
+    url(r'^user/', include('users.urls')),
+
+    # Mail: do whatever with emails: send, read, search, sort...
+    url(r'^mail/', include('mail.urls')),
 )
 
 from django.conf import settings

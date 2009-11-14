@@ -15,8 +15,8 @@
 
   <span id="options">
     <b>{{ user.email }}</b> |
-    <a href="/settings/">Settings</a> |
-    <a href="/logout/">Log out</a></p>
+		<a href="{% url settings %}">Settings</a> |
+		<a href="{% url logout %}">Log out</a></p>
   </span>
 </div> <!-- #header -->
 {% endblock %}
@@ -32,8 +32,8 @@
 {% endif %}
 
 <ul id="menu">
-  <li><a href="/compose/">Compose</a></li>
-  <li><a href="/mail/">Inbox</a></li>
+	<li><a href="{% url compose %}">Compose</a></li>
+	<li><a href="{% url inbox %}">Inbox</a></li>
   <li><a>Starred</a></li>
   <li><a>Sent</a></li>
   <li><a>Draft</a></li>
@@ -41,5 +41,14 @@
   <li>&nbsp;</li>
   <li><a>Contacts</a></li>
   <li><a>Tasks</a></li>
+</ul>
+
+<ul id="messages">
+	{% for message in messages %}
+	<li{% if not message.read %} class="new"{% endif %}>
+	{{ message.from }} {{ message.subject }} {{ message.date }}</li>
+	{% empty %}
+	<li>{% trans 'Hooray, no message here' %}!</li>
+	{% endfor %}
 </ul>
 {% endblock %}

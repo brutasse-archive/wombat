@@ -97,7 +97,7 @@ class IMAP(models.Model):
         return self.healthy
 
 
-    def update_tree(self):
+    def update_tree(self, update_counts=True, connection=None):
         """
         Updates the statuses of the directories, which are cached in the
         database.
@@ -109,9 +109,13 @@ class IMAP(models.Model):
             # aren't valid
             return
 
-        m = self.get_connection()
+        if connection is None:
+            m = self.get_connection()
+        else:
+            m = connection
 
         (status, directories) = m.list()
+
         dirs = []
         if status == 'OK':
             for d in directories:
@@ -136,11 +140,25 @@ class IMAP(models.Model):
             uptodate_dirs = [d.name for d in dirs]
             to_delete = self.directories.exclude(name__in=uptodate_dirs)
             to_delete.delete()
-            return len(dirs)
+
+            if update_counts:
+                # Update the directory counts
+                for directory in dirs:
+                    directory.message_counts(update=True, connection=m)
+
+            # Returning the number of directories or None
+            value = len(dirs)
         else:
-            return None
+            value = None
+
+        if connection is None:
+            m.logout()
+        return value
 
 def update_tree_on_save(sender, instance, created, **kwargs):
+    """
+    When an account is saved, the cached directories are automatically updated.
+    """
     if instance.healthy:
         instance.update_tree()
 post_save.connect(update_tree_on_save, sender=IMAP)
@@ -163,6 +181,10 @@ class Directory(models.Model):
     # If false, yes we can.
     no_select = models.BooleanField(_('Can\'t store messages'), default=False)
 
+    # Caching the unread & total counts directly in the DB
+    unread = models.PositiveIntegerField(_('Unread messages'), default=0)
+    total = models.PositiveIntegerField(_('Number of messages'), default=0)
+
     def __unicode__(self):
         return u'%s' % self.name
 
@@ -171,7 +193,7 @@ class Directory(models.Model):
         verbose_name_plural = _('Directories')
         app_label = 'users'
 
-    def message_counts(self):
+    def message_counts(self, connection=None, update=True):
         """
         Checks the number of messages on the server, depending on their
         statuses. Returns a dictionnary:
@@ -190,13 +212,18 @@ class Directory(models.Model):
         This should probably be cached (here or in memcache) and refreshed
         every <whatever> minutes when the user is online.
         """
-        m = self.mailbox.get_connection()
+        if connection is None:
+            m = self.mailbox.get_connection()
+        else:
+            m = connection
+
         if m is None:
             return
 
         statuses = '(MESSAGES UIDNEXT UIDVALIDITY UNSEEN)'
-        status, response = m.status(self.name, statuses)
-        m.logout() # KTHXBYE
+        status, response = m.status('"%s"' % self.name, statuses)
+        if connection is None:
+            m.logout() # KTHXBYE
 
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
@@ -207,14 +234,20 @@ class Directory(models.Model):
         # (it's a tuple with one element: a string)
         search = r'MESSAGES (\d+) UIDNEXT (\d+) UIDVALIDITY (\d+) UNSEEN (\d+)'
         numbers = re.search(search, response[0])
-        return {
+        values = {
                 'total':       int(numbers.group(1)),
                 'uidnext':     int(numbers.group(2)),
                 'uidvalidity': int(numbers.group(3)),
                 'unread':      int(numbers.group(4)),
         }
+        if update:
+            self.total = values['total']
+            self.unread = values['unread']
+            self.save()
 
-    def message_list(self, number_of_messages=50, offset=0):
+        return values
+
+    def message_list(self, number_of_messages=50, offset=0, connection=None):
         """
         Fetches a list of message headers from the server. This lists some of
         the messages that are stored in this very directory.
@@ -243,7 +276,11 @@ class Directory(models.Model):
             one replies to
         }
         """
-        m = self.mailbox.get_connection()
+        if connection is None:
+            m = self.mailbox.get_connection()
+        else:
+            m = connection
+
         if m is None:
             return
 
@@ -276,6 +313,8 @@ class Directory(models.Model):
 
         # We're done with the IMAP
         m.close()
+        if connection is None:
+            m.logout()
 
         if not status == 'OK' and flag_status == 'OK':
             print 'Fetching headers returned %s (message %s)' % (status,
@@ -324,7 +363,7 @@ class Directory(models.Model):
 
         return messages
 
-    def get_message(self, uid):
+    def get_message(self, uid, connection=None):
         """
         Fetches a full message from this diretcory, given its UID.
 
@@ -334,7 +373,11 @@ class Directory(models.Model):
         this message
         - raw is the unparsed source of this message
         """
-        m = self.mailbox.get_connection()
+        if connection is None:
+            m = self.mailbox.get_connection()
+        else:
+            m = connection
+
         if m is None:
             return
 
@@ -347,6 +390,8 @@ class Directory(models.Model):
         # We *might* want to fetch the other messages of the conversation. But
         # for now:
         m.close()
+        if connection is None:
+            m.logout()
 
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status

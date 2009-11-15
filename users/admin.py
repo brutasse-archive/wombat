@@ -3,7 +3,8 @@ from django.contrib import admin
 from users.models import IMAP, Directory, SMTP, Account
 
 class DirAdmin(admin.ModelAdmin):
-    list_display = ('name', 'mailbox', 'has_children', 'no_select')
+    list_display = ('name', 'mailbox', 'has_children', 'no_select',
+                    'unread', 'total')
 
 admin.site.register(IMAP)
 admin.site.register(SMTP)

@@ -8,5 +8,16 @@ CACHE_BACKEND = 'locmem:///'
 TEST_RUNNER='test_runner.test_runner_with_coverage'
 
 COVERAGE_MODULES = [
-        'imap.models',
+        'users.models',
+        'users.models.imap',
+        'users.views',
+        'users.forms',
+        'mail.views',
 ]
+
+DIRECTORIES = (
+        ('mail',
+         'python manage.py test --settings=test_settings'),
+        ('users',
+         'python manage.py test --settings=test_settings'),
+)

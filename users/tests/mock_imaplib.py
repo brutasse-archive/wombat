@@ -68,13 +68,13 @@ class IMAP4_SSL(object):
             ]
         )
 
-    def status(name, statuses):
+    def status(self, name, statuses):
         if not self.logged_in:
             raise
 
         return ('OK',
-                ['"%s" (MESSAGES 10 UIDNEXT 17626 UIDVALIDITY 2 UNSEEN 0)'] % \
-                        name)
+                ['"%s" (MESSAGES 10 UIDNEXT 17626 UIDVALIDITY 2 UNSEEN 0)' % \
+                        name])
 
     def select(self, name):
         """

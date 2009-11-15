@@ -5,18 +5,19 @@
 
 {% block form %}
 <div class="form">
-<form action="{% url add_account %}" method="post">
-	{% if submitted and success %}
-	<p>{% trans 'Your account has been successfully created' %}</p>
-	{% endif %}
-	{% if submitted and not success %}
-	<p>{% trans 'An error has been encountered while checking your credentials. Please double check and try again' %}</p>
-	{% endif %}
-	<h2>IMAP settings</h2>
-	{{ imap.as_p }}
-	<h2>SMTP settings</h2>
-	{{ smtp.as_p }}
-	<p><label>&nbsp;</label><input type="submit" value="{% trans 'Save Changes' %}" /></p>
-</form>
+  <form action="{% url add_account %}" method="post">
+    <h1>Add an account</h1>
+    {% if submitted and success %}
+    <p>{% trans 'Your account has been successfully created' %}</p>
+    {% endif %}
+    {% if submitted and not success %}
+    <p>{% trans 'An error has been encountered while checking your credentials. Please double check and try again' %}</p>
+    {% endif %}
+    <h2>IMAP settings</h2>
+    {{ imap.as_p }}
+    <h2>SMTP settings</h2>
+    {{ smtp.as_p }}
+    <p><label>&nbsp;</label><input type="submit" value="{% trans 'Save Changes' %}" /></p>
+  </form>
 </div>
 {% endblock %}

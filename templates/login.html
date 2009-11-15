@@ -19,6 +19,9 @@
       <label>&nbsp;</label>
       <input type="submit" value="{% trans 'Log in' %}" />
     </p>
+    {% if next %}
+      <input type="hidden" name="next" value="{{ next }}" />
+    {% endif %}
   </form>
   </div>
 </div>

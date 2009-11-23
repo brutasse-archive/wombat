@@ -5,7 +5,7 @@
 
 
 {% block form %}
-  <div class="form">
+  <div>
   <form action="{% url settings %}" method="post">
     {{ form.as_p }}
     <p><label>&nbsp;</label><input type="submit" value="{% trans 'Save Changes' %}" /></p>

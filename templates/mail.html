@@ -22,7 +22,25 @@
 {% endblock %}
 
 {% block content %}
-{% block panel %}
+{% block mail %}
+<div class="panel">
+  <ul id="messages">
+    <li class="select">Select: <a>All, None, Read, Unread, Starred, Unstarred</a></li>
+    {% for m in messages %}
+    <li{% if not m.read %} class="new"{% endif %}>
+      <a href="{% url message directory.name m.uid %}">
+        <input type="checkbox" name="m_{{ m.uid }}">
+        <span class="from">{{ m.from }}</span>
+        {% if m.subject %}{{ m.subject }}{% else %}{% trans 'No subject' %}{% endif %}
+      <span class="date">{{ m.date }}</span>
+      </a
+    ></li>
+    {% empty %}
+    <li>{% trans 'Hooray, no message here' %}!</li>
+    {% endfor %}
+    <li class="select">Select: <a>All, None, Read, Unread, Starred</a></li>
+  </ul>
+</div>
 {% endblock %}
 
 <h1>Inbox</h1>
@@ -30,6 +48,7 @@
 {% if err_msg %}
   <p class="errornote">{{ err_msg }}</p>
 {% endif %}
+
 
 <ul id="menu">
   <li><a href="{% url compose %}">Compose</a></li>
@@ -47,17 +66,4 @@
   <li><a href="{% url directory dir.name %}">{{ dir.name }}</a></li>
   {% endfor %}
 </ul>
-
-{% block mail %}
-<ul id="messages">
-  {% for message in messages %}
-  <li{% if not message.read %} class="new"{% endif %}>
-	{{ message.from }}
-	<a href="{% url message directory.name message.uid %}">{% if message.subject %}{{ message.subject }}{% else %}{% trans 'No subject' %}{% endif %}</a>
-	{{ message.date }}</li>
-  {% empty %}
-  <li>{% trans 'Hooray, no message here' %}!</li>
-  {% endfor %}
-</ul>
-{% endblock %}
 {% endblock %}

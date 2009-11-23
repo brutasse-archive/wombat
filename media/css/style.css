@@ -51,8 +51,33 @@ input[type=password], input[type=text] {width: 140px;}
  * Mails
  */
 
+ul#messages {padding: 0 1em;}
+ul#messages li {
+  display: block;
+  background-color: white;
+  border-top: 1px solid #d1d5d8;
+}
+
+#messages .from {font-weight: bold; color: black;}
+#messages .date {}
+
+ul#messages li.select {
+  background-color: #e0ffb7;
+  border: 0;
+  padding: .5em;
+}
+
 /* top & right must be the equal to header's padding. */
 #options {position: absolute; top: .5em; right: 1em;}
+
+.message {
+  margin: 0 1em;
+  padding: .5em 1em;
+  background: white;
+  border-radius: 10px; /* CSS 3 */
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+}
 
 /*
  * Panel

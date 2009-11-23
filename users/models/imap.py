@@ -299,6 +299,11 @@ class Directory(models.Model):
             return
 
         ids_list = ids[0].split()
+        if not ids_list: # No message in this list
+            if connection is None:
+                m.close()
+            return []
+
         number_of_messages = min(number_of_messages, len(ids_list))
         begin = - (number_of_messages + offset)
         end = - offset - 1

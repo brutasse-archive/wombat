@@ -70,6 +70,15 @@ ul#messages li.select {
 /* top & right must be the equal to header's padding. */
 #options {position: absolute; top: .5em; right: 1em;}
 
+.message {
+  margin: 0 1em;
+  padding: .5em 1em;
+  background: white;
+  border-radius: 10px; /* CSS 3 */
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+}
+
 /*
  * Panel
  */

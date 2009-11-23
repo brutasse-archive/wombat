@@ -1,6 +1,9 @@
 {% extends "mail.html" %}
 
 {% block mail %}
-<p>{{ message.0|linebreaksbr }}</p>
+<p><a href="{% url directory directory.name %}">back to <b>{{ directory.name }}</b></a></p>
+<div class="message">
+  <p>{{ message.0|linebreaks }}</p>
+</div>
 <p><a href="{% url directory directory.name %}">back to <b>{{ directory.name }}</b></a></p>
 {% endblock %}

@@ -22,8 +22,8 @@
 {% endblock %}
 
 {% block content %}
-{% block mail %}
 <div class="panel">
+{% block mail %}
   <ul id="messages">
     <li class="select">Select: <a>All, None, Read, Unread, Starred, Unstarred</a></li>
     {% for m in messages %}
@@ -40,8 +40,8 @@
     {% endfor %}
     <li class="select">Select: <a>All, None, Read, Unread, Starred</a></li>
   </ul>
-</div>
 {% endblock %}
+</div>
 
 <h1>Inbox</h1>
 
@@ -52,14 +52,6 @@
 
 <ul id="menu">
   <li><a href="{% url compose %}">Compose</a></li>
-  <li><a href="{% url inbox %}">Inbox</a></li>
-  <li><a>Starred</a></li>
-  <li><a>Sent</a></li>
-  <li><a>Draft</a></li>
-  <li><a>Trash</a></li>
-  <li>&nbsp;</li>
-  <li><a>Contacts</a></li>
-  <li><a>Tasks</a></li>
   <li>&nbsp;</li>
 
   {% for dir in directories %}

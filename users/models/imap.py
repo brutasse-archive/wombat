@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from django.db import models
 from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
@@ -72,7 +74,7 @@ class IMAP(models.Model):
     def check_credentials(self):
         """
         Tries to authenticate to the configured IMAP server.
-        
+
         This method alters the ``healthy`` attribute, settings it to True if
         the authentication is successful.
 
@@ -417,7 +419,7 @@ class Directory(models.Model):
 
     def _clean_header(self, header):
         """
-        The headers returned by the IMAP erver are not necessarily
+        The headers returned by the IMAP server are not necessarily
         human-friendly, especially if they contain non-ascii characters. This
         function cleans all of this and return a beautiful, utf-8 encoded
         header.

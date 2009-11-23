@@ -17,13 +17,16 @@ from users.models import Account, Directory
 def inbox(request):
     return directory(request, 'INBOX')
 
+
 @login_required
+@account_required
 def compose(request):
     err = ''
     form = MailForm(request.user)
     return render(request, 'compose.html', {
         'user': request.user, 'form': form, 'err_msg': err,
     })
+
 
 @login_required
 @account_required
@@ -55,7 +58,9 @@ def directory(request, directory, page=1):
     }
     return render(request, 'mail.html', context)
 
+
 @login_required
+@account_required
 def message(request, directory, uid):
     uid = int(uid)
     dir_list = request.user.get_profile().accounts.get(

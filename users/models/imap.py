@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from django.db import models
 from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
@@ -29,6 +28,7 @@ imaplib.Debug = 4
 if 'test' in os.environ['DJANGO_SETTINGS_MODULE']:
     from users.tests.mock_imaplib import IMAP4_SSL
     imaplib.IMAP4_SSL = IMAP4_SSL
+
 
 class IMAP(models.Model):
     """
@@ -102,7 +102,6 @@ class IMAP(models.Model):
         m.logout()
         return self.healthy
 
-
     def update_tree(self, update_counts=True, connection=None):
         """
         Updates the statuses of the directories, which are cached in the
@@ -161,6 +160,7 @@ class IMAP(models.Model):
             m.logout()
         return value
 
+
 def update_tree_on_save(sender, instance, created, **kwargs):
     """
     When an account is saved, the cached directories are automatically updated.
@@ -168,6 +168,7 @@ def update_tree_on_save(sender, instance, created, **kwargs):
     if instance.healthy:
         instance.update_tree()
 post_save.connect(update_tree_on_save, sender=IMAP)
+
 
 class Directory(models.Model):
     """
@@ -354,9 +355,13 @@ class Directory(models.Model):
                 if not header or not ':' in header:
                     continue
                 (key, value) = header.split(':', 1)
-                message[key.lower()] = self._clean_header(value.strip())
-                if key.lower() == 'date':
-                    message[key.lower()] = self._imap_to_datetime(self._clean_header(value.strip()))
+                value = _clean_header(value.strip())
+                key = key.lower()
+                message[key] = value
+                if key == 'date':
+                    message[key] = self._imap_to_datetime(value)
+                elif key in ('from', 'to'):
+                    message[key] = email.utils.parseaddr(value)
 
             messages.append(message)
 
@@ -403,40 +408,56 @@ class Directory(models.Model):
         # response[0][1]: the raw email (source)
         raw_email = response[0][1]
 
-        p = Parser()
-        message = p.parsestr(raw_email)
-        plain_text_content = ''
-        header_dict = {}
-        for part in message.walk():
-            if part.get_content_type() == 'text/plain':
-                for header in part.keys():
-                    to_clean = part[header]
-                    header_dict[header.lower()] = self._clean_header(to_clean)
-                plain_text_content += part.get_payload(decode=1)
-
-        return (plain_text_content, header_dict, raw_email)
-
-    def _clean_header(self, header):
-        """
-        The headers returned by the IMAP server are not necessarily
-        human-friendly, especially if they contain non-ascii characters. This
-        function cleans all of this and return a beautiful, utf-8 encoded
-        header.
-        """
-        cleaned = email.header.decode_header(header)
-        assembled = ''
-        for element in cleaned:
-            if assembled == '':
-                separator = ''
-            else:
-                separator = ' '
-            assembled = '%s%s%s' % (assembled, separator, element[0])
-        return assembled
+        return Message(raw_email)
 
     def _imap_to_datetime(self, date_string):
         """
         Returns a datetime.datetime instance given an IMAP date string
         """
-        print date_string
         time_tuple = email.utils.parsedate_tz(date_string)
         return datetime.datetime(*time_tuple[:6])
+
+class Message(object):
+    raw = ''
+    headers = {}
+    body = ''
+
+    def __init__(self, content):
+        self.raw = content
+        self.parse()
+
+
+    def parse(self):
+        """Fetches the content of the message and populates the available
+        headers"""
+        p = Parser()
+        message = p.parsestr(self.raw)
+        is_utf8 = False
+        for part in message.walk():
+            # VERY important to handle different encodings correctly
+            charset = part.get_content_charset()
+            if part.get_content_type() == 'text/plain':
+                for header in part.keys():
+                    to_clean = part[header]
+                    self.headers[header.lower()] = _clean_header(to_clean)
+                self.body += part.get_payload(decode=1)
+
+        self.body = self.body.decode(charset)
+
+
+def _clean_header(header):
+    """
+    The headers returned by the IMAP server are not necessarily
+    human-friendly, especially if they contain non-ascii characters. This
+    function cleans all of this and return a beautiful, utf-8 encoded
+    header.
+    """
+    cleaned = email.header.decode_header(header)
+    assembled = ''
+    for element in cleaned:
+        if assembled == '':
+            separator = ''
+        else:
+            separator = ' '
+        assembled = '%s%s%s' % (assembled, separator, element[0])
+    return assembled

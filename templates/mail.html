@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n date_tags %}
+{% load i18n mail_tags %}
 
 {% block title %}Wombat | {% trans 'Inbox' %} {% if mail_nb %}({{ mail_nb }}){% endif %}{% endblock %}
 
@@ -30,7 +30,9 @@
     <li{% if not m.read %} class="new"{% endif %}>
       <a href="{% url message directory.name m.uid %}">
         <input type="checkbox" name="m_{{ m.uid }}">
-        <span class="from">{{ m.from }}</span>
+				<span class="from">
+					{% if m.from.0 %}{{ m.from.0 }}{% else %}{{ m.from.1 }}{% endif %}
+				</span>
         {% if m.subject %}{{ m.subject }}{% else %}{% trans 'No subject' %}{% endif %}
       <span class="date">{{ m.date|hour_or_date }}</span>
       </a

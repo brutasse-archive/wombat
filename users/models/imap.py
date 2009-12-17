@@ -359,6 +359,9 @@ class Directory(models.Model):
                     message[key.lower()] = self._imap_to_datetime(self._clean_header(value.strip()))
 
             messages.append(message)
+
+        # Sorting the messages by date, most recent first
+        messages.sort(key=lambda item:item['date'], reverse=True)
         return messages
 
     def get_message(self, uid, connection=None):

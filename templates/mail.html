@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n date_tags %}
 
 {% block title %}Wombat | {% trans 'Inbox' %} {% if mail_nb %}({{ mail_nb }}){% endif %}{% endblock %}
 
@@ -32,7 +32,7 @@
         <input type="checkbox" name="m_{{ m.uid }}">
         <span class="from">{{ m.from }}</span>
         {% if m.subject %}{{ m.subject }}{% else %}{% trans 'No subject' %}{% endif %}
-      <span class="date">{{ m.date }}</span>
+      <span class="date">{{ m.date|hour_or_date }}</span>
       </a
     ></li>
     {% empty %}

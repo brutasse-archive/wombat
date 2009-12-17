@@ -10,6 +10,10 @@ import os
 import email.utils
 import email.header
 from email.parser import Parser
+import time
+import datetime
+
+imaplib.Debug = 4
 
 # Useful resources regarding the IMAP implementation:
 # ===================================================
@@ -311,63 +315,50 @@ class Directory(models.Model):
         end = - offset - 1
         fetch_range = '%s:%s' % (ids_list[begin], ids_list[end])
 
-        # Fetching only the header since we're just displaying a list
-        status, response = m.fetch(fetch_range, '(BODY[HEADER])')
-
-        # We need the IMAP flags since we don't know which message has been
-        # read from the SMTP headers.
-        flag_status, flags = m.fetch(fetch_range, 'FLAGS')
+        # Those are the headers we're interested in:
+        # * From, To, Date, Subject for display
+        # * Message-ID and In-Reply-To for grouping messages by threads
+        status, response = m.fetch(fetch_range,
+                                   ('(UID FLAGS RFC822.SIZE BODY.PEEK[HEADER.'
+                                    'FIELDS (Date From To Cc Subject Message-'
+                                    'ID References In-Reply-To)])'))
 
         # We're done with the IMAP
         m.close()
         if connection is None:
             m.logout()
 
-        if not status == 'OK' and flag_status == 'OK':
+        if not status == 'OK':
             print 'Fetching headers returned %s (message %s)' % (status,
                                                                  response)
-            print 'Fetching flags returned %s (message %s)' % (flag_status,
-                                                               flags)
             return
-
-        # Build a dictionnary with message UIDs as keys and its flags as
-        # values. Empty flag means unread. Otherwise it's 'Seen' or
-        # whatever else.
-        flag_re = r'^(\d+) \(FLAGS \(([^\)]*)\)\)$'
-        flag_dict = {}
-        for flag in flags:
-            elements = re.search(flag_re, flag)
-            flag_dict[elements.group(1)] = elements.group(2).replace('\\', '')
 
         # The list to fill with message info
         messages = []
 
-        num_elements = len(response)
-        body_re = r'^(\d+) \(BODY' # After that we don't care
-        parser = Parser() # We have to parse the headers
-        msgs = (2*i for i in range(num_elements/2)) # one message for 2 elements
-        for index in msgs:
-            header_data = response[index][1]
-            message_id = re.search(body_re, response[index][0]).group(1)
-            parsed_header = parser.parsestr(header_data)
+        # Getting the flags of each message
+        flag_re = r'^(\d+) \(UID \d+ FLAGS \(([^\)]+)\)'
 
-            # To be extended just after
+        for msg in response:
+            flag = msg[0]
+            if flag == ')': # That's an imaplib weirdness
+                continue
+            elements = re.search(flag_re, flag)
             message = {
-                    'read': 'Seen' in flag_dict[message_id],
-                    'uid': message_id,
+                    'uid': int(elements.group(1)),
+                    'read': 'Seen' in elements.group(2).replace('\\', ''),
             }
 
-            # Here are the headers we're interested in:
-            # * From, To, Date, Subject for displaying
-            # * Message-ID and In-Reply-To for grouping messages by threads
-            interesting_headers = ('From', 'To', 'Date', 'Subject',
-                    'Message-ID', 'In-Reply-To')
-            for part in parsed_header.walk():
-                for key in interesting_headers:
-                    if part.has_key(key):
-                        message[key.lower()] = self._clean_header(part[key])
-            messages.append(message)
+            headers = msg[1].split('\r\n')
+            for header in headers:
+                if not header or not ':' in header:
+                    continue
+                (key, value) = header.split(':', 1)
+                message[key.lower()] = self._clean_header(value.strip())
+                if key.lower() == 'date':
+                    message[key.lower()] = self._imap_to_datetime(self._clean_header(value.strip()))
 
+            messages.append(message)
         return messages
 
     def get_message(self, uid, connection=None):
@@ -438,3 +429,11 @@ class Directory(models.Model):
                 separator = ' '
             assembled = '%s%s%s' % (assembled, separator, element[0])
         return assembled
+
+    def _imap_to_datetime(self, date_string):
+        """
+        Returns a datetime.datetime instance given an IMAP date string
+        """
+        print date_string
+        time_tuple = email.utils.parsedate_tz(date_string)
+        return datetime.datetime(*time_tuple[:6])

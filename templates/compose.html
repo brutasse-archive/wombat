@@ -4,8 +4,7 @@
 {% block title %}Wombat | {% trans 'Compose' %}{% endblock %}
 
 
-{% block panel %}
-<div class="panel">
+{% block mail %}
   <div class="form">
 	<form action="{% url compose %}" method="post">
     <p>
@@ -21,5 +20,4 @@
     </p>
   </form>
   </div>
-</div>
 {% endblock %}

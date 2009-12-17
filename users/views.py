@@ -82,6 +82,8 @@ def add_account(request):
 
             context = {'imap': imap_form, 'smtp': smtp_form,
                        'success': success, 'submitted': True}
+        else:
+            context = {'imap': imap_form, 'smtp': smtp_form}
 
     else:
         imap_form = IMAPForm(prefix='imap')

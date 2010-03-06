@@ -54,11 +54,11 @@ class IMAP(models.Model):
     healthy = models.BooleanField(_('Healthy account'), default=False)
 
     def __unicode__(self):
-        return u'IMAP configuration for %s' % self.username
+        return u'%s imap' % self.account
 
     class Meta:
-        verbose_name = _('IMAP configuration')
-        verbose_name_plural = _('IMAP configurations')
+        verbose_name = _('IMAP config')
+        verbose_name_plural = _('IMAP configs')
         app_label = 'users'
 
     def get_connection(self):

@@ -54,15 +54,19 @@ class SMTP(models.Model):
     healthy = models.BooleanField(_('Healthy'), default=False)
 
     def __unicode__(self):
-        return u'%s' % self.server
+        return u'%s smtp' % self.account
 
+    class Meta:
+        verbose_name = _('SMTP config')
+        verbose_name_plural = _('SMTP configs')
+        app_label = 'users'
 
 class Account(models.Model):
     """
     A wombat user can have several accounts, whose information is gathered here
     """
     # In case we want to give the account a name...
-    name = models.CharField(_('Name'), max_length=255, blank=True, default='')
+    name = models.CharField(_('Name'), max_length=255, default=_('Default'))
 
     profile = models.ForeignKey(Profile, verbose_name=_('Profile'),
                                          related_name='accounts')
@@ -74,11 +78,7 @@ class Account(models.Model):
     default = models.BooleanField(_('Default account'), default=True)
 
     def __unicode__(self):
-        if self.default:
-            attr = 'default '
-        else:
-            attr = ''
-        return u'%s\'s %saccount' % (self.profile.user, attr)
+        return u'%s\'s %s' % (self.profile.user, self.name)
 
     def delete(self):
         self.smtp.delete()

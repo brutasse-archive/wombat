@@ -4,26 +4,25 @@
  */
 
 body {
+  font-family: 'Lucida Grande', Verdana, Arial, Helvetica, Sans-Serif;
   font-size: 72%;
-  font-family: 'Lucida Grande', Verdana, Arial, Sans-Serif;
   background-color: white;
-  margin: 0;
-  padding: 0;
   color: #333;
 }
+
+html, body, #container {padding: 0; margin: 0; height: 100%;}
 
 img {border: 0;}
 
 a {color: #06c; text-decoration: none;}
 a:hover {color: #f17912;}
 
-h1 a { color: inherit; }
-h1 a:hover { color: inherit; }
+h1 a {color: inherit;}
+h1 a:hover {color: inherit;}
 
-#container {margin: 0; padding: 0;}
 #header {padding: .5em 1em; border-bottom: 1px solid #959596;}
 #content {padding: 1em 2em;}
-#footer {padding: 1em 0; font-size: 0.9em; text-align: center; clear: both;}
+#footer {padding: 1em 0; font-size: 0.9em; text-align: center;}
 
 /*
  * Login
@@ -40,7 +39,8 @@ h2.title {
 
 #sidebar {
   float: right;
-  height: 300px;
+  min-height: 100%;
+  height: 100%;
   width: 250px;
   border-left: 1px solid #d1d5d8;
   background-color: #eef2f5;

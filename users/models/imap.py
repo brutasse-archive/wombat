@@ -35,11 +35,12 @@ class IMAP(models.Model):
     A wombat user can have several IMAP configurations. The information about
     those accounts is stored here, including login credentials.
     """
-    server = models.CharField(_('IMAP Server'), max_length=255)
+    server = models.CharField(_('Server'), max_length=255)
 
     # Port: 585 for IMAP4-SSL, 993 for IMAPS (Gmail default)
-    port = models.PositiveIntegerField(_('IMAP Port'), default=993)
-    username = models.CharField(_('Username or email'), max_length=255)
+    port = models.PositiveIntegerField(_('Port'), default=143,
+                                       help_text=_("(993 with SSL)"))
+    username = models.CharField(_('Username'), max_length=255)
 
     # TODO: have a look at http://docs.python.org/library/hmac.html
     # We have to find a way to store passwords in an encrypted way, and having
@@ -90,7 +91,7 @@ class IMAP(models.Model):
             response = m.login(self.username, self.password)
             if 'OK' in response:
                 self.healthy = True
-        except Exception as e:
+        except Exception, e:
             # There is no special exception in case of a failed login.
             # Catching the message instead.
             if not 'Invalid credentials' in str(e): # e.message is deprecated

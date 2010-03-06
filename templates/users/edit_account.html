@@ -1,0 +1,23 @@
+{% extends "base_settings.html" %}
+{% load i18n %}
+
+{% block title %}Wombat | {% trans 'Edit' %} {{ account }}{% endblock %}
+
+{% block form %}
+<div class="form">
+  <form action="{% url edit_account account.id %}" method="post">
+    <h1>{% trans 'Edit' %} {{ account }}</h1>
+    {% if submitted and success %}
+    <p>{% trans 'Your account has been successfully modified' %}</p>
+    {% endif %}
+    {% if submitted and not success %}
+    <p>{% trans 'An error has been encountered while checking your credentials. Please double check and try again' %}</p>
+    {% endif %}
+    <h2>IMAP settings</h2>
+    {{ imap.as_p }}
+    <h2>SMTP settings</h2>
+    {{ smtp.as_p }}
+    <p><label>&nbsp;</label><input type="submit" value="{% trans 'Save Changes' %}" /></p>
+  </form>
+</div>
+{% endblock %}

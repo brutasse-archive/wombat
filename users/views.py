@@ -3,6 +3,7 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404
 from django.core.urlresolvers import reverse
 from django.db import transaction
 
@@ -53,10 +54,20 @@ def settings(request):
         'user': request.user, 'form': form, 'err_msg': err,
     })
 
+
 @login_required
 def accounts(request):
     accounts = request.user.get_profile().accounts.all()
     return render(request, 'users/accounts.html', {'accounts': accounts})
+
+
+@login_required
+@transaction.commit_on_success
+def del_account(request, id):
+    a = get_object_or_404(Account, id=id)
+    a.delete()
+    return redirect(reverse('accounts'))
+
 
 @login_required
 @transaction.commit_on_success
@@ -68,17 +79,14 @@ def add_account(request):
             # Create an Account, attach it an IMAP and an SMTP instance.
             account = Account(profile=request.user.get_profile())
 
-            imap = IMAP(**imap_form.cleaned_data)
-            smtp = SMTP(**smtp_form.cleaned_data)
+            smtp_form.save(commit=False)
+            imap = imap_form.save(commit=False)
 
             success = imap.check_credentials()
             if success:
-                imap.save()
-                smtp.save()
-                account.imap = imap
-                account.smtp = smtp
+                account.imap = imap_form.save()
+                account.smtp = smtp_form.save()
                 account.save()
-
 
             context = {'imap': imap_form, 'smtp': smtp_form,
                        'success': success, 'submitted': True}
@@ -86,8 +94,38 @@ def add_account(request):
             context = {'imap': imap_form, 'smtp': smtp_form}
 
     else:
-        imap_form = IMAPForm(prefix='imap')
         smtp_form = SMTPForm(prefix='smtp')
+        imap_form = IMAPForm(prefix='imap')
         context = {'imap': imap_form, 'smtp': smtp_form}
 
     return render(request, 'users/add_account.html', context)
+
+
+@login_required
+@transaction.commit_on_success
+def edit_account(request, id):
+    a = get_object_or_404(Account, id=id)
+
+    if request.method == 'POST':
+        smtp_form = SMTPForm(data=request.POST, prefix='smtp', instance=a.smtp)
+        imap_form = IMAPForm(data=request.POST, prefix='imap', instance=a.imap)
+        if all([form.is_valid() for form in (smtp_form, imap_form)]):
+            smtp_form.save(commit=False)
+            imap = imap_form.save(commit=False)
+
+            success = imap.check_credentials()
+            if success:
+                smtp_form.save()
+                imap_form.save()
+
+            context = {'account': a, 'imap': imap_form, 'smtp': smtp_form,
+                       'success': success, 'submitted': True}
+        else:
+            context = {'account': a, 'imap': imap_form, 'smtp': smtp_form}
+
+    else:
+        smtp_form = SMTPForm(prefix='smtp', instance=a.smtp)
+        imap_form = IMAPForm(prefix='imap', instance=a.imap)
+        context = {'account': a, 'imap': imap_form, 'smtp': smtp_form}
+
+    return render(request, 'users/edit_account.html', context)

@@ -6,8 +6,11 @@
 {% block form %}
 	<div class="form">
 		<ul>
-			{% for account in accounts %}
-			<li>{{ accounts }}</li>
+            {% for a in accounts %}
+            <li>{{ a }}
+                <a href="{% url edit_account a.id %}">edit</a>
+                <a href="{% url del_account a.id %}">delete</a>
+            </li>
 			{% empty %}
 			<li>You don't have any account yet</li>
 			{% endfor %}

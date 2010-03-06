@@ -79,3 +79,8 @@ class Account(models.Model):
         else:
             attr = ''
         return u'%s\'s %saccount' % (self.profile.user, attr)
+
+    def delete(self):
+        self.smtp.delete()
+        self.imap.delete()
+        super(Account, self).delete()

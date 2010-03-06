@@ -8,7 +8,7 @@
   <div class="form" id="login-form">
   <form action="{% url login %}" method="post">
     <p>
-      <label for="id_username">{% trans 'Email:' %}</label>
+      <label for="id_username">{% trans 'Login:' %}</label>
       <input type="text" name="username" id="id_username" />
     </p>
     <p>
@@ -35,6 +35,9 @@ document.getElementById('id_username').focus()
 <h1>Wombat</h1>
   <h2 class="title">Login</h2>
 <p>{% trans 'Please provide login and password information to access your mail-account.' %}</p>
+
+  <h2 class="title">Register</h2>
+  <p>{% trans 'Create your account now and get acces to your emails everywhere, Wombat is totally' %} <a>{% trans 'Free' %}</a>.</p>
 
 {% if form.errors %}
 <p class="errornote">{{ form.non_field_errors.as_text }}</p>

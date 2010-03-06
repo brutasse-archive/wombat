@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 
 from users.models import Account, IMAP, SMTP
 
+
 class MailTest(TestCase):
     def setUp(self):
         # Creating a user
@@ -14,7 +15,7 @@ class MailTest(TestCase):
         # Creating an account
         imap = IMAP(server='imap.gmail.com', username='test_user',
                     password='password', healthy=True)
-        imap.save() # should update tree
+        imap.save()  # should update tree
         smtp = SMTP(server='smtp.gmail.com', username='test_user',
                     password='password', port=25, healthy=True)
         smtp.save()

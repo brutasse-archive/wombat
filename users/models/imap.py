@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
+
+import os
+import re
+import time
+import datetime
+import imaplib
+import email.utils
+import email.header
+from email.parser import Parser
+
 from django.db import models
 from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
 
-import imaplib
-import re
-import os
-import email.utils
-import email.header
-from email.parser import Parser
-import time
-import datetime
 
 imaplib.Debug = 4
 
@@ -94,7 +96,7 @@ class IMAP(models.Model):
         except Exception, e:
             # There is no special exception in case of a failed login.
             # Catching the message instead.
-            if not 'Invalid credentials' in str(e): # e.message is deprecated
+            if not 'Invalid credentials' in str(e):  # e.message is deprecated
                 # There is maybe another exception...
                 raise e
             else:
@@ -105,8 +107,7 @@ class IMAP(models.Model):
 
     def update_tree(self, update_counts=True, connection=None):
         """
-        Updates the statuses of the directories, which are cached in the
-        database.
+        Updates directories statuses cached in the database.
 
         Returns the number of directories or None if failed.
         """
@@ -134,12 +135,12 @@ class IMAP(models.Model):
                 # It's a string
                 details = d.split('"')
                 name = details[-2].decode('UTF-8')
-                directory, created = Directory.objects.get_or_create(mailbox=self,
-                                                            name=name)
-                directory.has_children = 'HasChildren' in details[0]
-                directory.no_select = 'Noselect' in details[0]
-                directory.save()
-                dirs.append(directory)
+                dir, created = Directory.objects.get_or_create(mailbox=self,
+                                                               name=name)
+                dir.has_children = 'HasChildren' in details[0]
+                dir.no_select = 'Noselect' in details[0]
+                dir.save()
+                dirs.append(dir)
 
             # Deleting 'old' directories. If things have changed on the server
             # via another client for instance
@@ -149,8 +150,8 @@ class IMAP(models.Model):
 
             if update_counts:
                 # Update the directory counts
-                for directory in dirs:
-                    directory.message_counts(update=True, connection=m)
+                for dir in dirs:
+                    dir.message_counts(update=True, connection=m)
 
             # Returning the number of directories or None
             value = len(dirs)
@@ -231,7 +232,7 @@ class Directory(models.Model):
         statuses = '(MESSAGES UIDNEXT UIDVALIDITY UNSEEN)'
         status, response = m.status('"%s"' % self.name, statuses)
         if connection is None:
-            m.logout() # KTHXBYE
+            m.logout()  # KTHXBYE
 
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
@@ -307,7 +308,7 @@ class Directory(models.Model):
             return
 
         ids_list = ids[0].split()
-        if not ids_list: # No message in this list
+        if not ids_list:  # No message in this list
             if connection is None:
                 m.close()
             return []
@@ -343,7 +344,7 @@ class Directory(models.Model):
 
         for msg in response:
             flag = msg[0]
-            if flag == ')': # That's an imaplib weirdness
+            if flag == ')':  # That's an imaplib weirdness
                 continue
             elements = re.search(flag_re, flag)
             message = {
@@ -367,7 +368,7 @@ class Directory(models.Model):
             messages.append(message)
 
         # Sorting the messages by date, most recent first
-        messages.sort(key=lambda item:item['date'], reverse=True)
+        messages.sort(key=lambda item: item['date'], reverse=True)
         return messages
 
     def get_message(self, uid, connection=None):
@@ -418,6 +419,7 @@ class Directory(models.Model):
         time_tuple = email.utils.parsedate_tz(date_string)
         return datetime.datetime(*time_tuple[:6])
 
+
 class Message(object):
     raw = ''
     headers = {}
@@ -426,7 +428,6 @@ class Message(object):
     def __init__(self, content):
         self.raw = content
         self.parse()
-
 
     def parse(self):
         """Fetches the content of the message and populates the available

@@ -29,9 +29,9 @@ class Profile(models.Model):
 
 def user_post_save(sender, instance, **kwargs):
     """
-        Makes the ORM create a profile each time an user is createdi
-        (or updated, if the user profile lost), including 'admin' user:
-            http://www.djangosnippets.org/snippets/500/
+    Makes the ORM create a profile each time an user is createdi
+    (or updated, if the user profile lost), including 'admin' user:
+        http://www.djangosnippets.org/snippets/500/
     """
     profile, new = Profile.objects.get_or_create(user=instance)
 

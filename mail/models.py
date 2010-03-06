@@ -15,4 +15,3 @@ class MailForm(forms.Form):
     def __init__(self, user):
         super(MailForm, self).__init__()
         self.fields['from_addr'].choices = [('', '%s <%s>' % (user, user.email))]
-

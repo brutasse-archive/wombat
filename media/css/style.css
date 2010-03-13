@@ -17,8 +17,8 @@ img {border: 0;}
 a {color: #06c; text-decoration: none;}
 a:hover {color: #f17912;}
 
-h1 a {color: inherit;}
-h1 a:hover {color: inherit;}
+h1 a, h2 a {color: inherit;}
+h1 a:hover, h2 a:hover {color: inherit;}
 
 #header {padding: .5em 1em; border-bottom: 1px solid #959596;}
 #content {padding: 1em 2em;}

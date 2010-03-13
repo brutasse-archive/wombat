@@ -28,7 +28,7 @@
     <li class="select">Select: <a>All, None, Read, Unread, Starred, Unstarred</a></li>
     {% for m in messages %}
     <li{% if not m.read %} class="new"{% endif %}>
-      <a href="{% url message directory.name m.uid %}">
+      <a href="{% url message directory.id m.uid %}">
         <input type="checkbox" name="m_{{ m.uid }}">
 				<span class="from">
 					{% if m.from.0 %}{{ m.from.0 }}{% else %}{{ m.from.1 }}{% endif %}
@@ -45,19 +45,19 @@
 {% endblock %}
 </div>
 
-<h1><a href="{% url inbox %}">Inbox</a></h1>
-
 {% if err_msg %}
   <p class="errornote">{{ err_msg }}</p>
 {% endif %}
 
-
+{% for account in user.get_profile.accounts.all %}
+{% if forloop.first %}
+<a href="{% url compose %}">Compose</a>
+{% endif %}
+<h2><a href="{% url inbox account.id %}">{{ account.name }}</a></h2>
 <ul id="menu">
-  <li><a href="{% url compose %}">Compose</a></li>
-  <li>&nbsp;</li>
-
-  {% for dir in directories %}
-  <li><a href="{% url directory dir.name %}">{{ dir.name }}</a></li>
+  {% for dir in account.imap_directories %}
+  <li><a href="{% url directory dir.id %}">{{ dir.name }}</a></li>
   {% endfor %}
 </ul>
+{% endfor %}
 {% endblock %}

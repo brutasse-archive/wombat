@@ -8,7 +8,7 @@ from django.core.urlresolvers import reverse
 from django.db import transaction
 
 from shortcuts import render
-from users.forms import ProfileForm, IMAPForm, SMTPForm
+from users.forms import AccountForm, ProfileForm, IMAPForm, SMTPForm
 from users.models import Account, SMTP, IMAP
 
 
@@ -19,15 +19,15 @@ def login(request, *a, **kw):
     """
 
     if request.user.is_authenticated():
-        return redirect(reverse('inbox'))
+        return redirect(reverse('default_inbox'))
 
     return auth_views.login(request, *a, **kw)
 
 
 def logout(request):
     """
-        Return to the index after a logout, we don't care about a
-        "Thanks for your visit" page.
+    Return to the index after a logout, we don't care about a
+    "Thanks for your visit" page.
     """
     from django.contrib.auth import logout
     logout(request)
@@ -43,7 +43,7 @@ def settings(request):
             form.save()
             # TODO: Display a javascript "Modification saved"
             # For the moment, redirect to the inbox
-            return redirect(reverse('inbox'))
+            return redirect(reverse('default_inbox'))
         else:
             # TODO: handle correctly the error and translate the message
             err = "Incorrect config..."
@@ -73,30 +73,31 @@ def del_account(request, id):
 @transaction.commit_on_success
 def add_account(request):
     if request.method == 'POST':
+        acnt_form = AccountForm(data=request.POST)
         smtp_form = SMTPForm(data=request.POST, prefix='smtp')
         imap_form = IMAPForm(data=request.POST, prefix='imap')
-        if all([form.is_valid() for form in (smtp_form, imap_form)]):
-            # Create an Account, attach it an IMAP and an SMTP instance.
-            account = Account(profile=request.user.get_profile())
-
-            smtp_form.save(commit=False)
+        if all([form.is_valid() for form in (acnt_form, smtp_form, imap_form)]):
             imap = imap_form.save(commit=False)
-
             success = imap.check_credentials()
             if success:
+                # Create an Account, attach it an IMAP and an SMTP instance.
+                account = acnt_form.save(commit=False)
+                account.profile = request.user.get_profile()
                 account.imap = imap_form.save()
                 account.smtp = smtp_form.save()
                 account.save()
 
-            context = {'imap': imap_form, 'smtp': smtp_form,
-                       'success': success, 'submitted': True}
+            context = {'acnt': acnt_form, 'imap': imap_form,
+                       'smtp': smtp_form, 'success': success, 'submitted': True}
         else:
-            context = {'imap': imap_form, 'smtp': smtp_form}
+            context = {'acnt': acnt_form, 'imap': imap_form,
+                       'smtp': smtp_form}
 
     else:
+        acnt_form = AccountForm()
         smtp_form = SMTPForm(prefix='smtp')
         imap_form = IMAPForm(prefix='imap')
-        context = {'imap': imap_form, 'smtp': smtp_form}
+        context = {'acnt': acnt_form, 'imap': imap_form, 'smtp': smtp_form}
 
     return render(request, 'users/add_account.html', context)
 

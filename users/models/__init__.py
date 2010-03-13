@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from django.db import models
-from django.contrib.auth.models import User
+from django.http import Http404
 from django.conf import settings
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 
 from users.models.imap import IMAP, Directory
@@ -25,6 +27,15 @@ class Profile(models.Model):
 
     def __unicode__(self):
         return u'%s\'s profile' % self.user
+
+    def get_directory(self, id):
+        """ Return user's IMAP directory mathing the id """
+        dir = get_object_or_404(Directory, id=id)
+        if dir.mailbox.account in self.accounts.all():
+            return dir
+        else:
+            raise Http404(_("Directory not found"))
+
 
 
 def user_post_save(sender, instance, **kwargs):
@@ -61,6 +72,7 @@ class SMTP(models.Model):
         verbose_name_plural = _('SMTP configs')
         app_label = 'users'
 
+
 class Account(models.Model):
     """
     A wombat user can have several accounts, whose information is gathered here
@@ -73,10 +85,6 @@ class Account(models.Model):
     smtp = models.OneToOneField(SMTP, verbose_name=_('SMTP'))
     imap = models.OneToOneField(IMAP, verbose_name=_('IMAP'))
 
-    # Make sure there's actually only one default account per user when
-    # creating accounts
-    default = models.BooleanField(_('Default account'), default=True)
-
     def __unicode__(self):
         return u'%s\'s %s' % (self.profile.user, self.name)
 
@@ -84,3 +92,9 @@ class Account(models.Model):
         self.smtp.delete()
         self.imap.delete()
         super(Account, self).delete()
+
+    def imap_directories(self):
+        """ Return the list of Directories. """
+        if self.imap:
+            return self.imap.directories.all()
+        return []

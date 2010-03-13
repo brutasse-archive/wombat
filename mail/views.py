@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 
 from shortcuts import render
@@ -14,8 +13,10 @@ from users.models import Account, Directory
 
 @login_required
 @account_required
-def inbox(request):
-    return directory(request, 'INBOX')
+def inbox(request, id=None):
+    if id is None:
+        id = request.user.get_profile().accounts.all()[0].id
+    return directory(request, id, 'INBOX')
 
 
 @login_required
@@ -30,19 +31,18 @@ def compose(request):
 
 @login_required
 @account_required
-def directory(request, directory, page=1):
-    dir_list = request.user.get_profile().accounts.get(
-            default=True).imap.directories.all()
-
-    directory = get_object_or_404(dir_list, name=directory)
+def directory(request, id, page=1):
+    # Filter with user profile to be sure you are looking at your mails !
+    # TODO Replace account's id with something more fashion
+    directory = request.user.get_profile().get_directory(id)
     number_of_messages = min(directory.total, 50)
 
     # Fetching a message list makes a call to the IMAP server. Trying to fetch
     # from the cache before, it's much faster...
     # Cache key: list-bob@example.comINBOX0
     cache_key = safe_cache_key('list-%s%s%s' % (directory.mailbox.username,
-                                           directory.name,
-                                           page))
+                                                directory.name,
+                                                page))
     messages = cache.get(cache_key, None)
 
     if messages is None:
@@ -53,7 +53,6 @@ def directory(request, directory, page=1):
     context = {
             'user': request.user,
             'directory': directory,
-            'directories': dir_list,
             'messages': messages,
     }
     return render(request, 'mail.html', context)
@@ -61,12 +60,8 @@ def directory(request, directory, page=1):
 
 @login_required
 @account_required
-def message(request, directory, uid):
-    uid = int(uid)
-    dir_list = request.user.get_profile().accounts.get(
-            default=True).imap.directories.all()
-
-    directory = get_object_or_404(dir_list, name=directory)
+def message(request, id, uid):
+    directory = request.user.get_profile().get_directory(id)
 
     # Cache key: message-bob@example.comINBOX1234
     cache_key = safe_cache_key('message-%s%s%s' % (directory.mailbox.username,
@@ -81,7 +76,6 @@ def message(request, directory, uid):
     context = {
             'user': request.user,
             'directory': directory,
-            'directories': dir_list,
             'message': message,
     }
     return render(request, 'message.html', context)

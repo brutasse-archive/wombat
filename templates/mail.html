@@ -56,7 +56,9 @@
 <h2><a href="{% url inbox account.id %}">{{ account.name }}</a></h2>
 <ul id="menu">
   {% for dir in account.imap_directories %}
-  <li><a href="{% url directory dir.id %}">{{ dir.name }}</a></li>
+	{% if not dir.no_select %}
+	<li><a href="{% url directory dir.id %}">{{ dir.name }}</a></li>
+	{% endif %}
   {% endfor %}
 </ul>
 {% endfor %}

@@ -13,6 +13,7 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
 
+import utils
 
 imaplib.Debug = 4
 
@@ -124,43 +125,41 @@ class IMAP(models.Model):
         (status, directories) = m.list()
 
         dirs = []
-        if status == 'OK':
-            for d in directories:
-                # d should look like:
-                # (\HasChildren) "/" "Archives"
-                # Or
-                # (\HasNoChildren) "/" "Archives/Web"
-                # Or even
-                # (\Noselect \HasChildren) "/" "[Gmail]"
-                # It's a string
-                details = d.split('"')
-                name = details[-2].decode('UTF-8')
-                dir, created = Directory.objects.get_or_create(mailbox=self,
-                                                               name=name)
-                dir.has_children = 'HasChildren' in details[0]
-                dir.no_select = 'Noselect' in details[0]
-                dir.save()
-                dirs.append(dir)
+        if not status == 'OK':
+            return
 
-            # Deleting 'old' directories. If things have changed on the server
-            # via another client for instance
-            uptodate_dirs = [d.name for d in dirs]
-            to_delete = self.directories.exclude(name__in=uptodate_dirs)
-            to_delete.delete()
+        for d in directories:
+            # d should look like:
+            # (\HasChildren) "/" "Archives"
+            # Or
+            # (\HasNoChildren) "/" "Archives/Web"
+            # Or even
+            # (\Noselect \HasChildren) "/" "[Gmail]"
+            # It's a string
+            details = d.split('"')
+            name = utils.decode(details[-2])
+            dir_, created = Directory.objects.get_or_create(mailbox=self,
+                                                           name=name)
+            dir_.has_children = 'HasChildren' in details[0]
+            dir_.no_select = 'Noselect' in details[0]
+            dir_.save()
+            dirs.append(dir_)
 
-            if update_counts:
-                # Update the directory counts
-                for dir in dirs:
-                    dir.message_counts(update=True, connection=m)
+        # Deleting 'old' directories. If things have changed on the server
+        # via another client for instance
+        uptodate_dirs = [d.name for d in dirs]
+        to_delete = self.directories.exclude(name__in=uptodate_dirs)
+        to_delete.delete()
 
-            # Returning the number of directories or None
-            value = len(dirs)
-        else:
-            value = None
+        if update_counts:
+            # Update the directory counts
+            for dir_ in dirs:
+                dir_.message_counts(update=True, connection=m)
 
         if connection is None:
             m.logout()
-        return value
+
+        return len(dirs)
 
 
 def update_tree_on_save(sender, instance, created, **kwargs):
@@ -230,7 +229,7 @@ class Directory(models.Model):
             return
 
         statuses = '(MESSAGES UIDNEXT UIDVALIDITY UNSEEN)'
-        status, response = m.status('"%s"' % self.name, statuses)
+        status, response = m.status('"%s"' % utils.encode(self.name), statuses)
         if connection is None:
             m.logout()  # KTHXBYE
 
@@ -294,7 +293,7 @@ class Directory(models.Model):
             return
 
         # Select the directory to list
-        status, response = m.select(self.name)
+        status, response = m.select(utils.encode(self.name))
 
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
@@ -340,7 +339,7 @@ class Directory(models.Model):
         messages = []
 
         # Getting the flags of each message
-        flag_re = r'^(\d+) \(UID \d+ FLAGS \(([^\)]+)\)'
+        flag_re = r'^(\d+) \(UID \d+ RFC822\.SIZE \d+ FLAGS \(([^\)]*)\)'
 
         for msg in response:
             flag = msg[0]
@@ -348,8 +347,8 @@ class Directory(models.Model):
                 continue
             elements = re.search(flag_re, flag)
             message = {
-                    'uid': int(elements.group(1)),
-                    'read': 'Seen' in elements.group(2).replace('\\', ''),
+                'uid': int(elements.group(1)),
+                'read': 'Seen' in elements.group(2).replace('\\', ''),
             }
 
             headers = msg[1].split('\r\n')
@@ -439,12 +438,13 @@ class Message(object):
             # VERY important to handle different encodings correctly
             charset = part.get_content_charset()
             if part.get_content_type() == 'text/plain':
-                for header in part.keys():
-                    to_clean = part[header]
+                for header, to_clean in part.items():
+                    print header, to_clean
                     self.headers[header.lower()] = _clean_header(to_clean)
                 self.body += part.get_payload(decode=1)
 
-        self.body = self.body.decode(charset)
+        if charset is not None:
+            self.body = self.body.decode(charset)
 
 
 def _clean_header(header):
@@ -461,5 +461,9 @@ def _clean_header(header):
             separator = ''
         else:
             separator = ' '
-        assembled = '%s%s%s' % (assembled, separator, element[0])
+        if element[1] is not None:
+            decoded = element[0].decode(element[1])
+        else:
+            decoded = element[0]
+        assembled += '%s%s' % (separator, decoded)
     return assembled

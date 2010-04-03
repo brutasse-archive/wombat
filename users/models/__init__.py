@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 
 from users.models.imap import IMAP, Directory
+from mail import constants
 
 # It's a package so we have to manually add the models that aren't here
 __all__ = ['IMAP', 'Directory']
@@ -93,8 +94,14 @@ class Account(models.Model):
         self.imap.delete()
         super(Account, self).delete()
 
+    def special_directories(self):
+        """Returns all the special directories: inbox, outbox, etc."""
+        if self.imap:
+            return self.imap.directories.exclude(folder_type=constants.NORMAL)
+        return []
+
     def imap_directories(self):
         """ Return the list of Directories. """
         if self.imap:
-            return self.imap.directories.all()
+            return self.imap.directories.filter(folder_type=constants.NORMAL)
         return []

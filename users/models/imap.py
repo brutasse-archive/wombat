@@ -15,6 +15,8 @@ from django.utils.translation import ugettext_lazy as _
 
 import utils
 
+from mail import constants
+
 imaplib.Debug = 4
 
 # Useful resources regarding the IMAP implementation:
@@ -138,10 +140,17 @@ class IMAP(models.Model):
             # It's a string
             details = d.split('"')
             name = utils.decode(details[-2])
+
+            # Is it a special directory?
+            ftype = _guess_folder_type(name.lower())
+            if ftype == constants.OTHER:
+                name = name.replace('[Gmail]/', '')
+
             dir_, created = Directory.objects.get_or_create(mailbox=self,
-                                                           name=name)
+                                                            name=name)
             dir_.has_children = 'HasChildren' in details[0]
             dir_.no_select = 'Noselect' in details[0]
+            dir_.folder_type = ftype
             dir_.save()
             dirs.append(dir_)
 
@@ -192,6 +201,11 @@ class Directory(models.Model):
     # Caching the unread & total counts directly in the DB
     unread = models.PositiveIntegerField(_('Unread messages'), default=0)
     total = models.PositiveIntegerField(_('Number of messages'), default=0)
+
+    # Folders types: Inbox, Trash, Spam...
+    folder_type = models.IntegerField(_('Folder type'),
+                                      choices=constants.FOLDER_TYPES,
+                                      default=constants.NORMAL, db_index=True)
 
     def __unicode__(self):
         return u'%s' % self.name
@@ -467,3 +481,28 @@ def _clean_header(header):
             decoded = element[0]
         assembled += '%s%s' % (separator, decoded)
     return assembled
+
+def _guess_folder_type(name):
+    """
+    Guesses the type of the folder given its name. Returns a constant to put
+    in the ``folder_type`` attribute of the folder.
+    """
+    if name in ('inbox',):
+        return constants.INBOX
+
+    if name in ('drafts', '[gmail]/drafts'):
+        return constants.DRAFTS
+
+    if name in ('outbox', '[gmail]/sent mail'):
+        return constants.OUTBOX
+
+    if name in ('queue'):
+        return constants.QUEUE
+
+    if name in ('trash', '[gmail]/trash'):
+        return constants.TRASH
+
+    if name.startswith('[gmail]/'):
+        return constants.OTHER
+    # Finally...
+    return constants.NORMAL

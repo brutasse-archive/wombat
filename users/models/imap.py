@@ -337,7 +337,8 @@ class Directory(models.Model):
         status, response = m.fetch(fetch_range,
                                    ('(UID FLAGS RFC822.SIZE BODY.PEEK[HEADER.'
                                     'FIELDS (Date From To Cc Subject Message-'
-                                    'ID References In-Reply-To)])'))
+                                    'ID References In-Reply-To)]'
+                                    ' BODYSTRUCTURE)'))
 
         # We're done with the IMAP
         m.close()
@@ -354,15 +355,19 @@ class Directory(models.Model):
 
         # Getting the flags of each message
         flag_re = r'^(\d+) \(UID \d+ RFC822\.SIZE \d+ FLAGS \(([^\)]*)\)'
+        # And the body structure
+        body_re = r'\) BODYSTRUCTURE \((.+)\) BODY'
 
         for msg in response:
-            flag = msg[0]
-            if flag == ')':  # That's an imaplib weirdness
+            content= msg[0]
+            if content == ')':  # That's an imaplib weirdness
                 continue
-            elements = re.search(flag_re, flag)
+            elements = re.search(flag_re, content)
+            bodystructure = re.search(body_re, content)
             message = {
                 'uid': int(elements.group(1)),
                 'read': 'Seen' in elements.group(2).replace('\\', ''),
+                'attachment': 'attachment' in bodystructure.group(1).lower(),
             }
 
             headers = msg[1].split('\r\n')
@@ -402,7 +407,7 @@ class Directory(models.Model):
         if m is None:
             return
 
-        status, result = m.select(self.name)
+        status, result = m.select(utils.encode(self.name))
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
             return
@@ -453,7 +458,6 @@ class Message(object):
             charset = part.get_content_charset()
             if part.get_content_type() == 'text/plain':
                 for header, to_clean in part.items():
-                    print header, to_clean
                     self.headers[header.lower()] = _clean_header(to_clean)
                 self.body += part.get_payload(decode=1)
 

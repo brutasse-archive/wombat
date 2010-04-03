@@ -86,6 +86,7 @@ def add_account(request):
                 account.imap = imap_form.save()
                 account.smtp = smtp_form.save()
                 account.save()
+                return redirect(reverse('edit_account', args=[account.id]))
 
             context = {'acnt': acnt_form, 'imap': imap_form,
                        'smtp': smtp_form, 'success': success, 'submitted': True}

@@ -97,7 +97,8 @@ class Account(models.Model):
     def special_directories(self):
         """Returns all the special directories: inbox, outbox, etc."""
         if self.imap:
-            return self.imap.directories.exclude(folder_type=constants.NORMAL)
+            dirs = self.imap.directories.exclude(folder_type=constants.NORMAL)
+            return dirs.order_by('folder_type')
         return []
 
     def imap_directories(self):

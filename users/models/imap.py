@@ -273,7 +273,43 @@ class Directory(models.Model):
 
         return values
 
-    def message_list(self, number_of_messages=50, offset=0, connection=None):
+    def get_uids(self, connection=None):
+        """Lists the UIDs of the messages stored in this folder.
+
+        Returns a list of the messages' UIDs"""
+        if connection is None:
+            m = self.mailbox.get_connection()
+        else:
+            m = connection
+
+        if m is None:
+            return
+
+        # Select the directory to list
+        status, response = m.select(utils.encode(self.name))
+
+        if not status == 'OK':
+            print 'Unexpected result: "%s"' % status
+            return
+
+        # Fetch the UIDs of the messages in this directory
+        status, ids = m.search(None, 'ALL')
+        m.close()
+
+        if not status == 'OK':
+            print 'Unexpected result: "%s"' % status
+            return
+
+        if connection is None:
+            m.logout()
+
+        uids = ids[0].split()
+        if not uids:  # No message in this list
+            return []
+        return uids
+
+    def message_list(self, number_of_messages=50, offset=0, force_uids=None,
+                     connection=None):
         """
         Fetches a list of message headers from the server. This lists some of
         the messages that are stored in this very directory.
@@ -288,6 +324,11 @@ class Directory(models.Model):
 
         ``message_list(offset=50)`` will retrieve the list to show on the
         second page.
+
+        ``force_uids`` can be used if you're only interested in a few
+        messages. ``message_list(force_uids=[23, 25])`` will return you the
+        status of those two messages. It is useless to set ``offset`` and
+        ``number_of_messages`` if you specify ``force_uids``.
 
         This method returns a tuple containing dictionnaries, each of them
         representing an email, with the following attributes:
@@ -310,30 +351,20 @@ class Directory(models.Model):
         if m is None:
             return
 
-        # Select the directory to list
-        status, response = m.select(utils.encode(self.name))
+        if force_uids is None:
+            ids_list = self.get_uids(connection=m)
 
+            number_of_messages = min(number_of_messages, len(ids_list))
+            begin = - (number_of_messages + offset)
+            end = - offset - 1
+            fetch_range = '%s:%s' % (ids_list[begin], ids_list[end])
+        else:
+            fetch_range = ','.join(force_uids)
+
+        status, result = m.select(utils.encode(self.name))
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
             return
-
-        # Fetch the UIDs of the messages in this directory
-        status, ids = m.search(None, 'ALL')
-
-        if not status == 'OK':
-            print 'Unexpected result: "%s"' % status
-            return
-
-        ids_list = ids[0].split()
-        if not ids_list:  # No message in this list
-            if connection is None:
-                m.close()
-            return []
-
-        number_of_messages = min(number_of_messages, len(ids_list))
-        begin = - (number_of_messages + offset)
-        end = - offset - 1
-        fetch_range = '%s:%s' % (ids_list[begin], ids_list[end])
 
         # Those are the headers we're interested in:
         # * From, To, Date, Subject for display
@@ -345,7 +376,6 @@ class Directory(models.Model):
                                     ' BODYSTRUCTURE)'))
 
         # We're done with the IMAP
-        m.close()
         if connection is None:
             m.logout()
 
@@ -397,11 +427,7 @@ class Directory(models.Model):
         """
         Fetches a full message from this diretcory, given its UID.
 
-        Returns (body, headers, raw), where:
-        - body is a string containing the plain-text version of the email
-        - headers is a dictionnary containing all the available headers in
-        this message
-        - raw is the unparsed source of this message
+        Returns a ``Message`` instance.
         """
         if connection is None:
             m = self.mailbox.get_connection()
@@ -417,8 +443,12 @@ class Directory(models.Model):
             return
 
         status, response = m.fetch(uid, 'RFC822')
-        # We *might* want to fetch the other messages of the conversation. But
-        # for now:
+        read = self.message_list(force_uids=[uid], connection=m)[0]['read']
+        if not read:
+            status, response = m.store(uid, '+FLAGS.SILENT', '\\Seen')
+            if not status == 'OK':
+                print 'Unexpected result: "%s"' % status
+
         m.close()
         if connection is None:
             m.logout()

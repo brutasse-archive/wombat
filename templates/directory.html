@@ -1,15 +1,7 @@
 {% if not dir.no_select %}
 <li>
 {% if dir.unread %}<strong>{% endif %}
-  <a href="{% url directory dir.id %}">
-    {% ifnotequal dir.folder_type 0 %}
-    {% ifequal dir.folder_type 6 %}{# Other #}
-    {{ dir.name }}
-    {% else %}
-    {{ dir.get_folder_type_display }}
-    {% endifequal %}
-    {% else %}
-    {{ dir.name }}{% endifnotequal %}
+  <a href="{% url directory dir.id %}">{{ dir }}
     {% if dir.unread %}({{ dir.unread }}){% endif %}</a>
   {% if dir.unread %}</strong>{% endif %}
 </li>

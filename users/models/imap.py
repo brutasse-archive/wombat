@@ -208,7 +208,11 @@ class Directory(models.Model):
                                       default=constants.NORMAL, db_index=True)
 
     def __unicode__(self):
-        return u'%s' % self.name
+        if not self.folder_type == constants.NORMAL:
+            if self.folder_type == constants.OTHER:
+                return self.name
+            return self.get_folder_type_display()
+        return self.name
 
     class Meta:
         ordering = ('name',)

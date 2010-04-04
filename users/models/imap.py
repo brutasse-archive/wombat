@@ -445,7 +445,7 @@ class Directory(models.Model):
 class Message(object):
     raw = ''
     headers = {}
-    body = ''
+    body = u''
 
     def __init__(self, content):
         self.raw = content
@@ -456,17 +456,16 @@ class Message(object):
         headers"""
         p = Parser()
         message = p.parsestr(self.raw)
-        is_utf8 = False
         for part in message.walk():
             # VERY important to handle different encodings correctly
             charset = part.get_content_charset()
             if part.get_content_type() == 'text/plain':
                 for header, to_clean in part.items():
                     self.headers[header.lower()] = _clean_header(to_clean)
-                self.body += part.get_payload(decode=1)
-
-        if charset is not None:
-            self.body = self.body.decode(charset)
+                if charset is not None:
+                    self.body += part.get_payload(decode=1).decode(charset)
+                else:
+                    self.body += part.get_payload(decode=1)
 
 
 def _clean_header(header):

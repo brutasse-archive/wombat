@@ -35,6 +35,10 @@ if 'test' in os.environ['DJANGO_SETTINGS_MODULE']:
     imaplib.IMAP4_SSL = IMAP4_SSL
 
 
+FLAG_RE = re.compile(r'^(\d+) .* FLAGS \(([^\)]*)\)')
+BODY_RE = re.compile(r'\) BODYSTRUCTURE \((.+)\) BODY')
+
+
 class IMAP(models.Model):
     """
     A wombat user can have several IMAP configurations. The information about
@@ -387,17 +391,14 @@ class Directory(models.Model):
         # The list to fill with message info
         messages = []
 
-        # Getting the flags of each message
-        flag_re = r'^(\d+) \(UID \d+ RFC822\.SIZE \d+ FLAGS \(([^\)]*)\)'
-        # And the body structure
-        body_re = r'\) BODYSTRUCTURE \((.+)\) BODY'
-
         for msg in response:
             content= msg[0]
             if content == ')':  # That's an imaplib weirdness
                 continue
-            elements = re.search(flag_re, content)
-            bodystructure = re.search(body_re, content)
+            # Getting the flags of each message
+            elements = FLAG_RE.search(content)
+            # And the body structure
+            bodystructure = BODY_RE.search(content)
             message = {
                 'uid': int(elements.group(1)),
                 'read': 'Seen' in elements.group(2).replace('\\', ''),

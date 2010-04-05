@@ -27,6 +27,7 @@
 <div class="panel">
 {% block panel %}
   Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
+  {% include "inc/messagecount.html" %}
   <ul id="messages">
     {% for m in messages %}
     <li{% if not m.read %} class="new"{% endif %}>
@@ -43,6 +44,7 @@
     {% endfor %}
   </ul>
   Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
+  {% include "inc/messagecount.html" %}
 {% endblock %}
 </div>
 
@@ -57,13 +59,13 @@
 <h2><a href="{% url inbox account.id %}">{{ account.name }}</a></h2>
 <ul class="menu">
   {% for dir in account.special_directories %}
-  {% include 'directory.html' %}
+  {% include "inc/directory.html" %}
   {% endfor %}
 </ul>
 
 <ul class="menu">
   {% for dir in account.imap_directories %}
-  {% include 'directory.html' %}
+  {% include "inc/directory.html" %}
   {% endfor %}
 </ul>
 {% endfor %}

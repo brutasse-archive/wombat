@@ -69,6 +69,8 @@ input[type=password], input[type=text] {width: 140px;}
  * Mails
  */
 
+.messagecount {float: right;}
+
 ul#messages {
   margin: 5px 0;
   min-height: 200px;

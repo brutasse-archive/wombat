@@ -24,8 +24,8 @@
 {% block content %}
 <div class="panel">
 {% block mail %}
+  Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
   <ul id="messages">
-    <li class="select">Select: <a>All, None, Read, Unread, Starred, Unstarred</a></li>
     {% for m in messages %}
     <li{% if not m.read %} class="new"{% endif %}>
       <input type="checkbox" name="m_{{ m.uid }}">
@@ -39,8 +39,8 @@
     {% empty %}
     <li>{% trans 'Hooray, no message here' %}!</li>
     {% endfor %}
-    <li class="select">Select: <a>All, None, Read, Unread, Starred</a></li>
   </ul>
+  Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
 {% endblock %}
 </div>
 

@@ -55,13 +55,17 @@ input[type=password], input[type=text] {width: 140px;}
  */
 
 ul#messages {padding: 0 1em; list-style-type: none;}
-ul#messages li {border-top: 1px solid #d1d5d8; background: #f0f0f0;}
-ul#messages li.select {border: 0; padding: .5em; background: #e0ffb7;}
-ul#messages li.new {background: #fff;}
 
-.from {font-weight: bold; color: #000; display: inline-block; width: 200px;}
-.date {float: right; padding: 5px 3px 0 0;}
-.attachment {float: right; padding: 3px 2px 0 0;}
+#messages li {background: #f0f0f0; clear: both; border-top: 1px solid #d1d5d8;}
+#messages li.new {background: #fff;}
+#messages li:hover {background: #ffd;}
+
+#messages li input[type=checkbox] {float: left;}
+#messages li a {display: block; width: 100%; padding: 3px 0;}
+
+.from {color: #666; font-weight: bold; display: inline-block; width: 200px;}
+.new .from {color: #000;}
+.date, .attachment {float: right; padding: 0 2px;}
 
 
 /* top & right must be the equal to header's padding. */

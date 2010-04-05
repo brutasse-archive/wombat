@@ -38,7 +38,7 @@ if 'test' in os.environ['DJANGO_SETTINGS_MODULE']:
 
 
 FLAG_RE = re.compile(r'^(\d+) .* FLAGS \(([^\)]*)\)')
-BODY_RE = re.compile(r'\) BODYSTRUCTURE \((.+)\) BODY')
+BODY_RE = re.compile(r'BODYSTRUCTURE \((.+)\)')
 
 
 class IMAP(models.Model):
@@ -103,13 +103,8 @@ class IMAP(models.Model):
             if 'OK' in response:
                 self.healthy = True
         except Exception, e:
-            # There is no special exception in case of a failed login.
-            # Catching the message instead.
-            if not 'Invalid credentials' in str(e):  # e.message is deprecated
-                # There is maybe another exception...
-                raise e
-            else:
-                self.healthy = False
+            # There is no special exception for a failed login, bare except.
+            self.healthy = False
         # That was it, closing the connection
         m.logout()
         return self.healthy
@@ -391,8 +386,19 @@ class Directory(models.Model):
         # The list to fill with message info
         messages = []
 
+        # FIXME -- Some servers return 2 responses: one for FLAGS+headers,
+        # one for BODYSTRUCTURE. This hack moves a double response into a
+        #single one
+        if (force_uids and 2*len(force_uids) == len(response)) or \
+                (force_uids is None and 2*len(ids_list) == len(response)):
+            rsp = []
+            for i in range(0, len(response), 2):
+                msg = ''.join((response[i][0], response[i+1]))
+                rsp.append([msg, response[i][1]])
+            response = rsp
+
         for msg in response:
-            content= msg[0]
+            content = msg[0]
             if content == ')':  # That's an imaplib weirdness
                 continue
 
@@ -536,7 +542,7 @@ def _guess_folder_type(name):
     if name in ('drafts', '[gmail]/drafts'):
         return constants.DRAFTS
 
-    if name in ('outbox', '[gmail]/sent mail'):
+    if name in ('outbox', 'sent', '[gmail]/sent mail'):
         return constants.OUTBOX
 
     if name in ('queue'):

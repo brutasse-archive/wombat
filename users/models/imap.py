@@ -143,14 +143,10 @@ class IMAP(models.Model):
             # (\HasNoChildren) "/" "Archives/Web"
             # Or even
             # (\Noselect \HasChildren) "/" "[Gmail]"
-            # It's a string
             details = d.split('"')
             name = utils.decode(details[-2])
 
-            # Is it a special directory?
             ftype = _guess_folder_type(name.lower())
-            if ftype == constants.OTHER:
-                name = name.replace('[Gmail]/', '')
 
             dir_, created = Directory.objects.get_or_create(mailbox=self,
                                                             name=name)
@@ -216,7 +212,7 @@ class Directory(models.Model):
     def __unicode__(self):
         if not self.folder_type == constants.NORMAL:
             if self.folder_type == constants.OTHER:
-                return self.name
+                return self.name.replace('[Gmail]/', '')
             return self.get_folder_type_display()
         return self.name
 
@@ -359,6 +355,8 @@ class Directory(models.Model):
 
         if force_uids is None:
             ids_list = self.get_uids(connection=m)
+            if not len(ids_list):
+                return []
 
             number_of_messages = min(number_of_messages, len(ids_list))
             begin = - (number_of_messages + offset)
@@ -397,13 +395,12 @@ class Directory(models.Model):
             content= msg[0]
             if content == ')':  # That's an imaplib weirdness
                 continue
-            # Getting the flags of each message
-            elements = FLAG_RE.search(content)
-            # And the body structure
+
+            flags = FLAG_RE.search(content)
             bodystructure = BODY_RE.search(content)
             message = {
-                'uid': int(elements.group(1)),
-                'read': 'Seen' in elements.group(2).replace('\\', ''),
+                'uid': int(flags.group(1)),
+                'read': 'Seen' in flags.group(2).replace('\\', ''),
                 'attachment': 'attachment' in bodystructure.group(1).lower(),
             }
 
@@ -422,7 +419,6 @@ class Directory(models.Model):
 
             messages.append(message)
 
-        # Sorting the messages by date, most recent first
         messages.sort(key=lambda item: item['date'], reverse=True)
         return messages
 
@@ -551,5 +547,4 @@ def _guess_folder_type(name):
 
     if name.startswith('[gmail]/'):
         return constants.OTHER
-    # Finally...
     return constants.NORMAL

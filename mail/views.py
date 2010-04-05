@@ -8,7 +8,7 @@ from shortcuts import render
 from decorators import account_required
 
 from mail import constants
-from mail.forms import MailForm
+from mail.forms import MailForm, ActionForm, MoveForm
 from users.models import Account, Directory, IMAP
 
 
@@ -46,7 +46,35 @@ def directory(request, account_slug, mbox_id, page=1):
 @account_required
 def message(request, account_slug, mbox_id, uid):
     directory = request.user.get_profile().get_directory(mbox_id)
-    context = {'directory': directory, 'message': directory.get_message(uid)}
+
+    if request.method == 'POST':
+        action = request.POST.get('action', None)
+        if action == 'unread':
+            directory.unread_message(uid)
+
+        if action == 'delete':
+            directory.delete_message(uid)
+            # TODO report deletion
+
+        if action == 'move':
+            form = MoveForm(directory.mailbox, data=request.POST)
+            if form.is_valid():
+                dest = directory.mailbox.directories.get(pk=form.cleaned_data['destination'])
+                directory.move_message(uid, dest.name)
+                # TODO report successful move
+            else:
+                # TODO report error
+                pass
+
+        return redirect(reverse('directory', args=[account_slug, mbox_id]))
+
+    context = {
+        'directory': directory,
+        'message': directory.get_message(uid),
+        'move_form': MoveForm(directory.mailbox, exclude=directory),
+        'unread_form': ActionForm('unread'),
+        'delete_form': ActionForm('delete'),
+    }
     return render(request, 'message.html', context)
 
 

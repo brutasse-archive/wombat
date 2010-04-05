@@ -22,8 +22,9 @@ h1 a, h2 a {color: inherit;}
 h1 a:hover, h2 a:hover {color: inherit;}
 
 #header {padding: .5em 1em; border-bottom: 1px solid #959596;}
+#header form, #header p {margin: 0; padding: 0;}
 #content {padding: 1em 2em;}
-#footer {padding: 1em 0; font-size: 0.9em; text-align: center;}
+#footer {padding: 1em 0; font-size: 0.9em; text-align: center; clear:both;}
 
 /*
  * Login
@@ -64,6 +65,8 @@ input[type=password], input[type=text] {width: 140px;}
   -webkit-border-radius: 10px;
   background-color: #e0ffb7;
 }
+
+.panel .inline {display: inline-block;}
 
 /*
  * Mails

@@ -1,0 +1,18 @@
+{% load i18n %}
+<p class="inline">
+  <a href="{% url directory directory.mailbox.account.slug directory.id %}">back to <b>{{ directory }}</b></a>
+</p>
+<form method="post" action="." class="inline">
+  {% with move_form as form %}{% include 'inc/inline_form.html' %}{% endwith %}
+  <p class="inline"><input type="submit" value="{% trans 'Move' %}"/></p>
+</form>
+
+<form method="post" action="." class="inline">
+  {% with unread_form as form %}{% include 'inc/inline_form.html' %}{% endwith %}
+  <p class="inline"><input type="submit" value="{% trans 'Mark as unread' %}"/></p>
+</form>
+
+<form method="post" action="." class="inline">
+  {% with delete_form as form %}{% include 'inc/inline_form.html' %}{% endwith %}
+  <p class="inline"><input type="submit" value="{% trans 'Delete' %}"/></p>
+</form>

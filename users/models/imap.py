@@ -454,6 +454,43 @@ class Directory(models.Model):
         messages.sort(key=lambda item: item['date'], reverse=True)
         return messages
 
+    def unread_message(self, uid, connection=None):
+        if connection is None:
+            m = self.mailbox.get_connection()
+        else:
+            m = connection
+
+        if m is None:
+            return
+
+        status, response = m.select(utils.encode(self.name))
+        status, response = m.store(uid, '-FLAGS.SILENT', '\\Seen')
+        status, response = m.close()
+        if connection is None:
+            m.logout()
+
+    def move_message(self, uid, dest, connection=None):
+        if connection is None:
+            m = self.mailbox.get_connection()
+        else:
+            m = connection
+
+        if m is None:
+            return
+
+        status, response = m.select(utils.encode(self.name))
+        status, response = m.copy(uid, utils.encode(dest))
+        status, response = m.store(uid, '+FLAGS.SILENT', '\\Deleted')
+        status, response = m.expunge()
+        status, response = m.close()
+
+        if connection is None:
+            m.logout()
+
+    def delete_message(self, uid, connection=None):
+        trash = self.mailbox.directories.filter(folder_type=constants.TRASH).get()
+        return self.move_message(uid, trash.name, connection=connection)
+
     def _fetch_message(self, uid, connection=None):
         """
         Fetches a full message from this diretcory, given its UID.

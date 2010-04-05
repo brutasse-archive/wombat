@@ -1,9 +1,9 @@
 {% extends "mail.html" %}
 
 {% block panel %}
-<p><a href="{% url directory directory.mailbox.account.slug directory.id %}">back to <b>{{ directory }}</b></a></p>
+{% include 'inc/message_menu.html' %}
 <div class="message">
   <p>{{ message.body|linebreaks }}</p>
 </div>
-<p><a href="{% url directory directory.mailbox.account.slug directory.id %}">back to <b>{{ directory }}</b></a></p>
+{% include 'inc/message_menu.html' %}
 {% endblock %}

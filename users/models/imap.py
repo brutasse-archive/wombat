@@ -11,6 +11,8 @@ from email.parser import Parser
 
 from django.db import models
 from django.db.models.signals import post_save
+from django.utils.html import strip_tags
+from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
 
 import utils
@@ -477,6 +479,7 @@ class Message(object):
     raw = ''
     headers = {}
     body = u''
+    html_body = u''
 
     def __init__(self, content):
         self.raw = content
@@ -488,15 +491,21 @@ class Message(object):
         p = Parser()
         message = p.parsestr(self.raw)
         for part in message.walk():
-            # VERY important to handle different encodings correctly
             charset = part.get_content_charset()
+            for header, to_clean in part.items():
+                self.headers[header.lower()] = _clean_header(to_clean)
+
+            payload = part.get_payload(decode=1)
+            if charset is not None:
+                payload = payload.decode(charset)
+
             if part.get_content_type() == 'text/plain':
-                for header, to_clean in part.items():
-                    self.headers[header.lower()] = _clean_header(to_clean)
-                if charset is not None:
-                    self.body += part.get_payload(decode=1).decode(charset)
-                else:
-                    self.body += part.get_payload(decode=1)
+                self.body += payload
+
+            if part.get_content_type() == 'text/html':
+                self.html_body += payload
+        if not self.body:
+            self.body = unescape_entities(strip_tags(self.html_body))
 
 
 def _clean_header(header):

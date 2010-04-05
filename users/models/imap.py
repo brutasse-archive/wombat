@@ -73,7 +73,7 @@ class IMAP(models.Model):
 
     def get_connection(self):
         """
-        Shortcut that is used by every method that needs an IMAP connection
+        Shortcut used by every method that needs an IMAP connection
         instance.
 
         Returns None or an imaplib.IMAP4_SSL instance (connected).
@@ -117,8 +117,6 @@ class IMAP(models.Model):
         Returns the number of directories or None if failed.
         """
         if not self.healthy:
-            # Don't even try to update the mailbox tree if the credentials
-            # aren't valid
             return
 
         if connection is None:
@@ -215,12 +213,11 @@ class Directory(models.Model):
 
     def get_message(self, uid):
         # Cache key: message-bob@example.comINBOX1234
-        cache_key = utils.safe_cache_key('message-%s%s%s' % (self.mailbox.username,
-                                                       self.name,
-                                                       uid))
+        cache_key = utils.safe_cache_key(
+                    'message-%s%s%s' % (self.mailbox.username, self.name, uid))
         message = cache.get(cache_key, None)
         if message is None:
-            message = self._get_message(uid)
+            message = self._fetch_message(uid)
             if message is not None:
                 cache.set(cache_key, message)
         return message
@@ -457,7 +454,7 @@ class Directory(models.Model):
         messages.sort(key=lambda item: item['date'], reverse=True)
         return messages
 
-    def _get_message(self, uid, connection=None):
+    def _fetch_message(self, uid, connection=None):
         """
         Fetches a full message from this diretcory, given its UID.
 

@@ -11,6 +11,7 @@ from email.parser import Parser
 
 from django.db import models
 from django.db.models.signals import post_save
+from django.core.cache import cache
 from django.utils.html import strip_tags
 from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
@@ -179,20 +180,16 @@ post_save.connect(update_tree_on_save, sender=IMAP)
 
 class Directory(models.Model):
     """
-    This represents a directory in the IMAP tree. Its attributes are cached for
-    performance/latency reasons and should be easy to update on demand or on a
-    regular basis.
+    Represents a directory in the IMAP tree. Its attributes are cached
+    for performance/latency reasons and should be easy to update on
+    demand or on a regular basis.
     """
     mailbox = models.ForeignKey(IMAP, verbose_name=_('Mailbox'),
                                 related_name='directories')
     name = models.CharField(_('Name'), max_length=255)
-
-    # A directory can have directories in it, or not.
     has_children = models.BooleanField(_('Has children'), default=False)
 
     # A directory may be able only to contain directories, not messages.
-    # If no_select is true, we can't store messages in it.
-    # If false, yes we can.
     no_select = models.BooleanField(_('Can\'t store messages'), default=False)
 
     # Caching the unread & total counts directly in the DB
@@ -204,22 +201,54 @@ class Directory(models.Model):
                                       choices=constants.FOLDER_TYPES,
                                       default=constants.NORMAL, db_index=True)
 
-    def __unicode__(self):
-        if not self.folder_type == constants.NORMAL:
-            if self.folder_type == constants.OTHER:
-                return self.name.replace('[Gmail]/', '')
-            return self.get_folder_type_display()
-        return self.name
-
     class Meta:
         ordering = ('name',)
         verbose_name_plural = _('Directories')
         app_label = 'users'
 
+    def __unicode__(self):
+        if not self.folder_type == constants.NORMAL:
+            if self.folder_type == constants.OTHER:
+                return self.name.replace('[Gmail]/', '')  # XXX GMail-only Fix
+            return self.get_folder_type_display()
+        return self.name
+
+    def get_message(self, uid):
+        # Cache key: message-bob@example.comINBOX1234
+        cache_key = utils.safe_cache_key('message-%s%s%s' % (self.mailbox.username,
+                                                       self.name,
+                                                       uid))
+        message = cache.get(cache_key, None)
+        if message is None:
+            message = self._get_message(uid)
+            if message is not None:
+                cache.set(cache_key, message)
+        return message
+
+    def get_messages(self, page):
+        number_of_messages = min(self.total, 50)
+
+        # Fetching a message list makes a call to the IMAP server.
+        # Trying to fetch
+        # from the cache before, it's much faster...
+        # Cache key: list-bob@example.comINBOX0
+        cache_key = utils.safe_cache_key('list-%s%s%s' % (self.mailbox.username,
+                                                    self.name,
+                                                    page))
+        messages = cache.get(cache_key, None)
+
+        if messages is None:
+            messages = self.message_list(number_of_messages=number_of_messages)
+            if messages is not None:
+                cache.set(cache_key, messages)
+        return messages
+
     def message_counts(self, connection=None, update=True):
         """
         Checks the number of messages on the server, depending on their
-        statuses. Returns a dictionnary:
+        statuses.
+
+        Returns a dictionnary:
         {
             'total': the total amount of messages,
             'unread': the number of unread messages,
@@ -428,7 +457,7 @@ class Directory(models.Model):
         messages.sort(key=lambda item: item['date'], reverse=True)
         return messages
 
-    def get_message(self, uid, connection=None):
+    def _get_message(self, uid, connection=None):
         """
         Fetches a full message from this diretcory, given its UID.
 

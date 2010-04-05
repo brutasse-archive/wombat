@@ -1,11 +1,15 @@
 from django.conf.urls.defaults import *
 
+account = '(?P<account_slug>[\w-]+)'
+mbox = '(?P<mbox_id>\d+)'
+msg = '(?P<uid>\d+)'
+
 urlpatterns = patterns('mail.views',
     url(r'^$', 'inbox', name='default_inbox'),
-    url(r'^(?P<id>\d+)/$', 'inbox', name='inbox'),
     url(r'^compose/$', 'compose', name='compose'),
-
-    # The order matters here
-    url(r'^(?P<id>\d+)/(?P<uid>\d+)/$', 'message', name='message'),
-    url(r'^(?P<id>\d+)/$', 'directory', name='directory'),
+    url(r'^%(account)s/$' % locals(), 'inbox', name='account_inbox'),
+    url(r'^%(account)s/check/$' % locals(), 'check_mail', name='check_mail'),
+    url(r'^%(account)s/%(mbox)s/$' % locals(), 'directory', name='directory'),
+    url(r'^%(account)s/%(mbox)s/%(msg)s/$' % locals(),
+        'message', name='message'),
 )

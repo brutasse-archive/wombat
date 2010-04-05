@@ -1,9 +1,9 @@
 {% extends "mail.html" %}
 
 {% block panel %}
-<p><a href="{% url directory directory.id %}">back to <b>{{ directory }}</b></a></p>
+<p><a href="{% url directory directory.mailbox.account.slug directory.id %}">back to <b>{{ directory }}</b></a></p>
 <div class="message">
   <p>{{ message.body|linebreaks }}</p>
 </div>
-<p><a href="{% url directory directory.id %}">back to <b>{{ directory }}</b></a></p>
+<p><a href="{% url directory directory.mailbox.account.slug directory.id %}">back to <b>{{ directory }}</b></a></p>
 {% endblock %}

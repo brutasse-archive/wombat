@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from django.conf import settings
+from django.contrib.auth.models import User
 from django.db import models
 from django.http import Http404
-from django.conf import settings
 from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
+from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
 
 from users.models.imap import IMAP, Directory
@@ -35,13 +36,12 @@ class Profile(models.Model):
     emails = property(_get_emails)
 
     def get_directory(self, id):
-        """ Return user's IMAP directory mathing the id """
+        """ Return user's IMAP directory matching the id """
         dir = get_object_or_404(Directory, id=id)
         if dir.mailbox.account in self.accounts.all():
             return dir
         else:
             raise Http404(_("Directory not found"))
-
 
 
 def user_post_save(sender, instance, **kwargs):
@@ -84,6 +84,7 @@ class Account(models.Model):
     A wombat user can have several accounts, whose information is gathered here
     """
     name = models.CharField(_('Name'), max_length=255, default=_('Default'))
+    slug = models.SlugField(_('Slug'))
     email = models.EmailField(_('Mail addresse'), default='john.bob@wmail.org')
 
     profile = models.ForeignKey(Profile, verbose_name=_('Profile'),
@@ -93,6 +94,9 @@ class Account(models.Model):
 
     def __unicode__(self):
         return u'%s\'s %s' % (self.profile.user, self.name)
+
+    class Meta:
+        unique_together = ('profile', 'slug')
 
     def delete(self):
         self.smtp.delete()
@@ -111,3 +115,11 @@ class Account(models.Model):
         if self.imap:
             return self.imap.directories.filter(folder_type=constants.NORMAL)
         return []
+
+
+def account_pre_save(sender, instance, **kwargs):
+    if not instance.slug:
+        # TODO make sure the slug is unique and doesn't conflict with URLs
+        instance.slug = slugify(instance.name)
+
+models.signals.pre_save.connect(account_pre_save, sender=Account)

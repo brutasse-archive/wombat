@@ -29,7 +29,7 @@
     {% for m in messages %}
     <li{% if not m.read %} class="new"{% endif %}>
       <input type="checkbox" name="m_{{ m.uid }}">
-      <a href="{% url message directory.id m.uid %}">
+      <a href="{% url message directory.mailbox.account.slug directory.id m.uid %}">
         <span class="from">{{ m.from.0|default:m.from.1 }}</span>
         {{ m.subject|default:"No subject" }}
         <span class="date">{{ m.date|hour_or_date }}</span>
@@ -52,7 +52,7 @@
 {% if forloop.first %}
 <a href="{% url compose %}">Compose</a>
 {% endif %}
-<h2><a href="{% url inbox account.id %}">{{ account.name }}</a></h2>
+<h2><a href="{% url account_inbox account.slug %}">{{ account.name }}</a></h2>
 <ul class="menu">
   {% for dir in account.special_directories %}
   {% include 'directory.html' %}

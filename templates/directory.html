@@ -1,7 +1,7 @@
 {% if not dir.no_select %}
 <li>
 {% if dir.unread %}<strong>{% endif %}
-  <a href="{% url directory dir.id %}">{{ dir }}
+  <a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }}
     {% if dir.unread %}({{ dir.unread }}){% endif %}</a>
   {% if dir.unread %}</strong>{% endif %}
 </li>

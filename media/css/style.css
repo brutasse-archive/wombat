@@ -5,7 +5,7 @@
 
 body {
   font-family: 'Lucida Grande', Verdana, Arial, Helvetica, Sans-Serif;
-  font-size: 72%;
+  font-size: 80%;
   background-color: white;
   color: #333;
 }
@@ -55,7 +55,14 @@ input[type=password], input[type=text] {width: 140px;}
  * Mails
  */
 
-ul#messages {padding: 0 1em;}
+ul#messages {
+  margin: 5px 0;
+  min-height: 200px;
+  background: #fff;
+  border-left: 1px solid #ddd;
+  border-right: 1px solid #ddd;
+}
+ul#messages, ul#messages li:last-child {border-bottom: 1px solid #d1d5d8;}
 
 #messages li {background: #f0f0f0; clear: both; border-top: 1px solid #d1d5d8;}
 #messages li.new {background: #fff;}
@@ -88,11 +95,11 @@ ul#messages {padding: 0 1em;}
 .panel {
   width: 80%;
   float: right;
+  padding: 5px;
   border-radius: 10px; /* CSS 3 */
   -moz-border-radius: 10px;
   -webkit-border-radius: 10px;
   background-color: #e0ffb7;
 }
 
-ul.submenu {}
 ul.submenu li {display: inline;}

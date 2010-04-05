@@ -6,7 +6,7 @@ from users.models import Account, Profile, IMAP, SMTP
 class AccountForm(forms.ModelForm):
     class Meta:
         model = Account
-        fields = ('name',)
+        fields = ('name', 'email')
 
 
 class ProfileForm(forms.ModelForm):

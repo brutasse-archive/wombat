@@ -109,9 +109,10 @@ def edit_account(request, id):
     a = get_object_or_404(Account, id=id)
 
     if request.method == 'POST':
+        acnt_form = AccountForm(data=request.POST, instance=a)
         smtp_form = SMTPForm(data=request.POST, prefix='smtp', instance=a.smtp)
         imap_form = IMAPForm(data=request.POST, prefix='imap', instance=a.imap)
-        if all([form.is_valid() for form in (smtp_form, imap_form)]):
+        if all([form.is_valid() for form in (acnt_form, smtp_form, imap_form)]):
             smtp_form.save(commit=False)
             imap = imap_form.save(commit=False)
 
@@ -119,15 +120,20 @@ def edit_account(request, id):
             if success:
                 smtp_form.save()
                 imap_form.save()
+                a = acnt_form.save()
 
-            context = {'account': a, 'imap': imap_form, 'smtp': smtp_form,
-                       'success': success, 'submitted': True}
+            context = {'account': a, 'acnt': acnt_form, 'imap': imap_form,
+                       'smtp': smtp_form, 'success': success, 'submitted': True}
         else:
-            context = {'account': a, 'imap': imap_form, 'smtp': smtp_form}
+            context = {'account': a, 'acnt': acnt_form, 'imap': imap_form,
+                       'smtp': smtp_form}
 
     else:
+        acnt_form = AccountForm(instance=a)
         smtp_form = SMTPForm(prefix='smtp', instance=a.smtp)
         imap_form = IMAPForm(prefix='imap', instance=a.imap)
-        context = {'account': a, 'imap': imap_form, 'smtp': smtp_form}
+
+        context = {'account': a, 'acnt': acnt_form, 'imap': imap_form,
+                   'smtp': smtp_form}
 
     return render(request, 'users/edit_account.html', context)

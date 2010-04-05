@@ -29,6 +29,11 @@ class Profile(models.Model):
     def __unicode__(self):
         return u'%s\'s profile' % self.user
 
+    def _get_emails(self):
+        return [a.email for a in self.accounts.all()]
+
+    emails = property(_get_emails)
+
     def get_directory(self, id):
         """ Return user's IMAP directory mathing the id """
         dir = get_object_or_404(Directory, id=id)
@@ -78,8 +83,8 @@ class Account(models.Model):
     """
     A wombat user can have several accounts, whose information is gathered here
     """
-    # In case we want to give the account a name...
     name = models.CharField(_('Name'), max_length=255, default=_('Default'))
+    email = models.EmailField(_('Mail addresse'), default='john.bob@wmail.org')
 
     profile = models.ForeignKey(Profile, verbose_name=_('Profile'),
                                          related_name='accounts')

@@ -13,6 +13,7 @@
     {% if submitted and not success %}
     <p>{% trans 'An error has been encountered while checking your credentials. Please double check and try again' %}</p>
     {% endif %}
+    {{ acnt.as_p }}
     <h2>IMAP settings</h2>
     {{ imap.as_p }}
     <h2>SMTP settings</h2>

@@ -7,7 +7,7 @@ from shortcuts import render
 from decorators import account_required
 from utils import safe_cache_key
 
-from mail.models import MailForm
+from mail.forms import MailForm
 from users.models import Account, Directory
 
 

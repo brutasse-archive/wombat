@@ -14,7 +14,7 @@
   </div>
 
   <span id="options">
-    <b>{{ user.email }}</b> |
+    <b>{{ user.get_profile.emails|first }}</b> |
     <a href="{% url settings %}">Settings</a> |
     <a href="{% url logout %}">Log out</a></p>
   </span>

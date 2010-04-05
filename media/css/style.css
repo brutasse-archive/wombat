@@ -13,7 +13,7 @@ body {
 html, body, #container {padding: 0; margin: 0; height: 100%;}
 
 img {border: 0;}
-ul {padding: 0; list-style-type: none;}
+ul {margin: 0; padding: 0; list-style-type: none;}
 
 a {color: #06c; text-decoration: none;}
 a:hover {color: #f17912;}
@@ -50,6 +50,20 @@ h2.title {
 #login-form {top: 60px; position: relative;}
 label {display: block; padding: 3px 10px 0 10px; float: left; width: 70px;}
 input[type=password], input[type=text] {width: 140px;}
+
+/*
+ * Panel
+ */
+
+.panel {
+  width: 80%;
+  float: right;
+  padding: 5px;
+  border-radius: 10px; /* CSS 3 */
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+  background-color: #e0ffb7;
+}
 
 /*
  * Mails
@@ -89,17 +103,7 @@ ul#messages, ul#messages li:last-child {border-bottom: 1px solid #d1d5d8;}
 }
 
 /*
- * Panel
+ * Settings
  */
-
-.panel {
-  width: 80%;
-  float: right;
-  padding: 5px;
-  border-radius: 10px; /* CSS 3 */
-  -moz-border-radius: 10px;
-  -webkit-border-radius: 10px;
-  background-color: #e0ffb7;
-}
 
 ul.submenu li {display: inline;}

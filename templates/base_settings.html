@@ -3,14 +3,12 @@
 
 {% block title %}Wombat | {% trans 'Settings' %}{% endblock %}
 
-{% block mail %}
-<div id="settings">
-  <ul class="submenu">
-    <li><a href="{% url settings %}">General</a></li>
-    <li><a href="{% url accounts %}">Accounts</a></li>
-    <li><a>Labels</a></li>
-    <li><a>Filters</a></li>
-  </ul>
-	{% block form %}{% endblock %}
-</div>
+{% block panel %}
+<ul class="submenu">
+  <li><a href="{% url settings %}">General</a></li>
+  <li><a href="{% url accounts %}">Accounts</a></li>
+  <li><a>Labels</a></li>
+  <li><a>Filters</a></li>
+</ul>
+{% block form %}{% endblock %}
 {% endblock %}

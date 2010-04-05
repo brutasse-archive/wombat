@@ -68,7 +68,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
 )
 
-ROOT_URLCONF = 'wombat.urls'
+ROOT_URLCONF = 'urls'
 
 
 TEMPLATE_DIRS = (

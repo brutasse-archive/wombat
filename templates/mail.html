@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n mail_tags %}
 
-{% block title %}Wombat | {% trans 'Inbox' %} {% if mail_nb %}({{ mail_nb }}){% endif %}{% endblock %}
+{% block title %}Wombat | {{directory|numberize:"unread" }}{% endblock %}
 
 
 {% block header %}

@@ -3,6 +3,17 @@ import datetime
 
 register = template.Library()
 
+@register.filter
+def numberize(instance, count_attr):
+    """
+        Filter used to display directory (n) where n is the
+        number of unread messages:
+    """
+    value = getattr(instance, count_attr)
+    if value:
+        return "%s (%d)" % (instance, value)
+    return instance
+
 
 @register.filter
 def hour_or_date(datetime_instance):

@@ -8,15 +8,17 @@
 <div id="header">
   <div id="search">
     <form action="/search/" method="post" id="search-form">
-    <input type="text" name="search" id="id_search" size="20" value="" />
-    <input type="submit" value="Search" />
+      <p>
+        <input type="text" name="search" id="id_search" size="20" value="" />
+        <input type="submit" value="Search" />
+      </p>
   </form>
   </div>
 
   <span id="options">
     <b>{{ user.get_profile.emails|first }}</b> |
     <a href="{% url settings %}">Settings</a> |
-    <a href="{% url logout %}">Log out</a></p>
+    <a href="{% url logout %}">Log out</a>
   </span>
 </div> <!-- #header -->
 {% endblock %}
@@ -25,15 +27,16 @@
 <div class="panel">
 {% block panel %}
   Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
+  {% include "inc/messagecount.html" %}
   <ul id="messages">
     {% for m in messages %}
     <li{% if not m.read %} class="new"{% endif %}>
-      <input type="checkbox" name="m_{{ m.uid }}">
+      <input type="checkbox" name="m_{{ m.uid }}" />
       <a href="{% url message directory.mailbox.account.slug directory.id m.uid %}">
         <span class="from">{{ m.from.0|default:m.from.1 }}</span>
         {{ m.subject|default:"No subject" }}
         <span class="date">{{ m.date|hour_or_date }}</span>
-        {% if m.attachment %}<img class="attachment" src="{{ MEDIA_URL }}img/attach.png"/>{% endif %}
+        {% if m.attachment %}<img class="attachment" src="{{ MEDIA_URL }}img/attach.png" alt="paperclip"/>{% endif %}
       </a>
     </li>
     {% empty %}
@@ -41,6 +44,7 @@
     {% endfor %}
   </ul>
   Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
+  {% include "inc/messagecount.html" %}
 {% endblock %}
 </div>
 
@@ -55,13 +59,13 @@
 <h2><a href="{% url account_inbox account.slug %}">{{ account.name }}</a></h2>
 <ul class="menu">
   {% for dir in account.special_directories %}
-  {% include 'directory.html' %}
+  {% include "inc/directory.html" %}
   {% endfor %}
 </ul>
 
 <ul class="menu">
   {% for dir in account.imap_directories %}
-  {% include 'directory.html' %}
+  {% include "inc/directory.html" %}
   {% endfor %}
 </ul>
 {% endfor %}

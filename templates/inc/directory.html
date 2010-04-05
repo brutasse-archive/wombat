@@ -1,0 +1,9 @@
+{% if not dir.no_select %}
+<li>
+{% if dir.unread %}
+<b><a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }} ({{ dir.unread }})</a></b>
+{% else %}
+<a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }}</a>
+{% endif %}
+</li>
+{% endif %}

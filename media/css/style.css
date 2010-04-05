@@ -54,27 +54,15 @@ input[type=password], input[type=text] {width: 140px;}
  * Mails
  */
 
-ul#messages {padding: 0 1em;}
-ul#messages li {
-  display: block;
-  background-color: white;
-  border-top: 1px solid #d1d5d8;
-}
+ul#messages {padding: 0 1em; list-style-type: none;}
+ul#messages li {border-top: 1px solid #d1d5d8; background: #f0f0f0;}
+ul#messages li.select {border: 0; padding: .5em; background: #e0ffb7;}
+ul#messages li.new {background: #fff;}
 
-#messages .from {font-weight: bold; color: black;}
-#messages .date {}
+.from {font-weight: bold; color: #000; display: inline-block; width: 200px;}
+.date {float: right; padding: 5px 3px 0 0;}
+.attachment {float: right; padding: 3px 2px 0 0;}
 
-ul#messages li {background-color: #f0f0f0; position: relative;}
-ul#messages li.new {background-color: #fff;}
-ul#messages li .from { display: inline-block; width: 200px;}
-ul#messages li .date { float: right; padding: 5px 3px 0 0; }
-ul#messages li .attachment { float: right; padding: 3px 2px 0 0; }
-
-ul#messages li.select {
-  background-color: #e0ffb7;
-  border: 0;
-  padding: .5em;
-}
 
 /* top & right must be the equal to header's padding. */
 #options {position: absolute; top: .5em; right: 1em;}

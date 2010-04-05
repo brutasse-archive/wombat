@@ -13,6 +13,7 @@ body {
 html, body, #container {padding: 0; margin: 0; height: 100%;}
 
 img {border: 0;}
+ul {padding: 0; list-style-type: none;}
 
 a {color: #06c; text-decoration: none;}
 a:hover {color: #f17912;}
@@ -55,26 +56,18 @@ input[type=password], input[type=text] {width: 140px;}
  */
 
 ul#messages {padding: 0 1em;}
-ul#messages li {
-  display: block;
-  background-color: white;
-  border-top: 1px solid #d1d5d8;
-}
 
-#messages .from {font-weight: bold; color: black;}
-#messages .date {}
+#messages li {background: #f0f0f0; clear: both; border-top: 1px solid #d1d5d8;}
+#messages li.new {background: #fff;}
+#messages li:hover {background: #ffd;}
 
-ul#messages li {background-color: #f0f0f0; position: relative;}
-ul#messages li.new {background-color: #fff;}
-ul#messages li .from { display: inline-block; width: 200px;}
-ul#messages li .date { float: right; padding: 5px 3px 0 0; }
-ul#messages li .attachment { float: right; padding: 3px 2px 0 0; }
+#messages li input[type=checkbox] {float: left;}
+#messages li a {display: block; width: 100%; padding: 3px 0;}
 
-ul#messages li.select {
-  background-color: #e0ffb7;
-  border: 0;
-  padding: .5em;
-}
+.from {color: #666; font-weight: bold; display: inline-block; width: 200px;}
+.new .from {color: #000;}
+.date, .attachment {float: right; padding: 0 2px;}
+
 
 /* top & right must be the equal to header's padding. */
 #options {position: absolute; top: .5em; right: 1em;}

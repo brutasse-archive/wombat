@@ -24,25 +24,23 @@
 {% block content %}
 <div class="panel">
 {% block mail %}
+  Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
   <ul id="messages">
-    <li class="select">Select: <a>All, None, Read, Unread, Starred, Unstarred</a></li>
     {% for m in messages %}
     <li{% if not m.read %} class="new"{% endif %}>
       <input type="checkbox" name="m_{{ m.uid }}">
       <a href="{% url message directory.id m.uid %}">
-        <span class="from">
-          {% if m.from.0 %}{{ m.from.0 }}{% else %}{{ m.from.1 }}{% endif %}
-        </span>
-        {% if m.subject %}{{ m.subject }}{% else %}{% trans 'No subject' %}{% endif %}
+        <span class="from">{{ m.from.0|default:m.from.1 }}</span>
+        {{ m.subject|default:"No subject" }}
         <span class="date">{{ m.date|hour_or_date }}</span>
-        {% if m.attachment %}<img class="attachment" src="{{ MEDIA_URL}}img/attach.png"/>{% endif %}
+        {% if m.attachment %}<img class="attachment" src="{{ MEDIA_URL }}img/attach.png"/>{% endif %}
       </a>
     </li>
     {% empty %}
     <li>{% trans 'Hooray, no message here' %}!</li>
     {% endfor %}
-    <li class="select">Select: <a>All, None, Read, Unread, Starred</a></li>
   </ul>
+  Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
 {% endblock %}
 </div>
 

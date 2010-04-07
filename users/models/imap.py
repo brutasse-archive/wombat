@@ -309,7 +309,7 @@ class Directory(models.Model):
             return
 
         # Select the directory to list
-        status, response = m.select(utils.encode(self.name))
+        status, response = m.select(utils.encode(self.name), readonly=True)
 
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
@@ -386,7 +386,7 @@ class Directory(models.Model):
         else:
             fetch_range = ','.join(force_uids)
 
-        status, result = m.select(utils.encode(self.name))
+        status, result = m.select(utils.encode(self.name), readonly=True)
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
             return
@@ -505,7 +505,7 @@ class Directory(models.Model):
         if m is None:
             return
 
-        status, result = m.select(utils.encode(self.name))
+        status, result = m.select(utils.encode(self.name), readonly=True)
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
             return

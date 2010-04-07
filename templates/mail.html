@@ -33,7 +33,7 @@
     <li{% if not m.read %} class="new"{% endif %}>
       <input type="checkbox" name="m_{{ m.uid }}" />
       <a href="{% url message directory.mailbox.account.slug directory.id m.uid %}">
-        <span class="from">{{ m.from.0|default:m.from.1 }}</span>
+          {% if m.from %}<span class="from">{{ m.from.0|default:m.from.1 }}</span>{% endif %}
         {{ m.subject|default:"No subject" }}
         <span class="date">{{ m.date|hour_or_date }}</span>
         {% if m.attachment %}<img class="attachment" src="{{ MEDIA_URL }}img/attach.png" alt="paperclip"/>{% endif %}

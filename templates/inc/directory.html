@@ -1,9 +1,10 @@
-{% if not dir.no_select %}
-<li>
-{% if dir.unread %}
-<b><a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }} ({{ dir.unread }})</a></b>
-{% else %}
-<a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }}</a>
-{% endif %}
+{% load mail_tags %}
+<li {% if dir.unread %}class="unread"{% endif %}>
+  {% if not dir.no_select %}
+  <a href="{% url directory dir.mailbox.account.slug dir.id %}">
+    {{ dir|numberize:"unread" }}
+  </a>
+  {% else %}
+    {% if dir.has_children %}{{ dir }}{% endif %}
+  {% endif %}
 </li>
-{% endif %}

@@ -69,7 +69,14 @@ input[type=password], input[type=text] {width: 140px;}
 .panel .inline {display: inline-block;}
 
 /*
- * Mails
+ * Menu
+ */
+
+li.unread {font-weight: bold;}
+
+
+/*
+ * Mail list
  */
 
 .messagecount {float: right;}
@@ -97,6 +104,10 @@ ul#messages, ul#messages li:last-child {border-bottom: 1px solid #d1d5d8;}
 
 /* top & right must be the equal to header's padding. */
 #options {position: absolute; top: .5em; right: 1em;}
+
+/*
+ * Mail display
+ */
 
 .message {
   margin: 0 1em;

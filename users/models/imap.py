@@ -126,10 +126,10 @@ class IMAP(models.Model):
 
         (status, directories) = m.list()
 
-        dirs = []
         if not status == 'OK':
             return
 
+        dirs = []
         for d in directories:
             # d should look like:
             # (\HasChildren) "/" "Archives"
@@ -146,18 +146,16 @@ class IMAP(models.Model):
                                                             name=name)
             dir_.has_children = 'HasChildren' in details[0]
             dir_.no_select = 'Noselect' in details[0]
+            dir_.no_inferiors = 'NoInferiors' in details[0]
             dir_.folder_type = ftype
             dir_.save()
             dirs.append(dir_)
 
-        # Deleting 'old' directories. If things have changed on the server
-        # via another client for instance
-        uptodate_dirs = [d.name for d in dirs]
-        to_delete = self.directories.exclude(name__in=uptodate_dirs)
-        to_delete.delete()
+        # Deleting 'old' directories. If things have changed on the
+        # server via another client for instance
+        self.directories.exclude(name__in=[d.name for d in dirs]).delete()
 
         if update_counts:
-            # Update the directory counts
             for dir_ in dirs:
                 dir_.message_counts(update=True, connection=m)
 
@@ -185,10 +183,11 @@ class Directory(models.Model):
     mailbox = models.ForeignKey(IMAP, verbose_name=_('Mailbox'),
                                 related_name='directories')
     name = models.CharField(_('Name'), max_length=255)
-    has_children = models.BooleanField(_('Has children'), default=False)
 
-    # A directory may be able only to contain directories, not messages.
-    no_select = models.BooleanField(_('Can\'t store messages'), default=False)
+    # IMAP attributes
+    has_children = models.BooleanField(_('Has children'), default=False)
+    no_select = models.BooleanField(_('Cannot store messages'), default=False)
+    no_inferiors = models.BooleanField(_('Cannot store folders'), default=False)
 
     # Caching the unread & total counts directly in the DB
     unread = models.PositiveIntegerField(_('Unread messages'), default=0)

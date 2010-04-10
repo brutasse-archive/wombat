@@ -10,7 +10,6 @@ import email.header
 
 from django.db import models
 from django.db.models.signals import post_save
-from django.core.cache import cache
 from django.utils.html import strip_tags
 from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
@@ -211,32 +210,12 @@ class Directory(models.Model):
         return self.name
 
     def get_message(self, uid):
-        # Cache key: message-bob@example.comINBOX1234
-        cache_key = utils.safe_cache_key(
-                    'message-%s%s%s' % (self.mailbox.username, self.name, uid))
-        message = cache.get(cache_key, None)
-        if message is None:
-            message = self._fetch_message(uid)
-            if message is not None:
-                cache.set(cache_key, message)
+        message = self._fetch_message(uid)
         return message
 
     def get_messages(self, page):
         number_of_messages = min(self.total, 50)
-
-        # Fetching a message list makes a call to the IMAP server.
-        # Trying to fetch
-        # from the cache before, it's much faster...
-        # Cache key: list-bob@example.comINBOX0
-        cache_key = utils.safe_cache_key('list-%s%s%s' % (self.mailbox.username,
-                                                    self.name,
-                                                    page))
-        messages = cache.get(cache_key, None)
-
-        if messages is None:
-            messages = self.list_messages(number_of_messages=number_of_messages)
-            if messages is not None:
-                cache.set(cache_key, messages)
+        messages = self.list_messages(number_of_messages=number_of_messages)
         return messages
 
     def list_messages(self, number_of_messages=50, offset=0, force_uids=None,

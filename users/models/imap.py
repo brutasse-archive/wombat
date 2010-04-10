@@ -7,7 +7,6 @@ import datetime
 import imaplib
 import email.utils
 import email.header
-from email.parser import Parser
 
 from django.db import models
 from django.db.models.signals import post_save
@@ -19,6 +18,7 @@ from django.utils.translation import ugettext_lazy as _
 import utils
 
 from mail import constants
+from mail.models import Message
 
 imaplib.Debug = 4
 
@@ -440,7 +440,7 @@ class Directory(models.Model):
                 if not header or not ':' in header:
                     continue
                 (key, value) = header.split(':', 1)
-                value = _clean_header(value.strip())
+                value = Message._clean_header(value.strip())
                 key = key.lower()
                 message[key] = value
                 if key == 'date':
@@ -539,59 +539,6 @@ class Directory(models.Model):
         return datetime.datetime(*time_tuple[:6])
 
 
-class Message(object):
-    raw = ''
-    headers = {}
-    body = u''
-    html_body = u''
-
-    def __init__(self, content):
-        self.raw = content
-        self.parse()
-
-    def parse(self):
-        """Fetches the content of the message and populates the available
-        headers"""
-        p = Parser()
-        message = p.parsestr(self.raw)
-        for part in message.walk():
-            charset = part.get_content_charset()
-            for header, to_clean in part.items():
-                self.headers[header.lower()] = _clean_header(to_clean)
-
-            payload = part.get_payload(decode=1)
-            if charset is not None:
-                payload = payload.decode(charset)
-
-            if part.get_content_type() == 'text/plain':
-                self.body += payload
-
-            if part.get_content_type() == 'text/html':
-                self.html_body += payload
-        if not self.body:
-            self.body = unescape_entities(strip_tags(self.html_body))
-
-
-def _clean_header(header):
-    """
-    The headers returned by the IMAP server are not necessarily
-    human-friendly, especially if they contain non-ascii characters. This
-    function cleans all of this and return a beautiful, utf-8 encoded
-    header.
-    """
-    cleaned = email.header.decode_header(header)
-    assembled = ''
-    for element in cleaned:
-        if assembled == '':
-            separator = ''
-        else:
-            separator = ' '
-        if element[1] is not None:
-            decoded = element[0].decode(element[1])
-        else:
-            decoded = element[0]
-        assembled += '%s%s' % (separator, decoded)
-    return assembled
 
 def _guess_folder_type(name):
     """

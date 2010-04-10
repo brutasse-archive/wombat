@@ -109,6 +109,22 @@ class IMAP(models.Model):
         m.logout()
         return self.healthy
 
+    def check_mail(self, connection=None):
+        """
+        Refresh all directories for this connection.
+        """
+        if not self.healthy:
+            return
+
+        if connection is None:
+            m = self.get_connection()
+        else:
+            m = connection
+
+        for directory in self.directories.all():
+            directory.count_messages(connection=m)
+        m.logout()
+
     def update_tree(self, update_counts=True, connection=None):
         """
         Updates directories statuses cached in the database.

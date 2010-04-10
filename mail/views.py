@@ -83,10 +83,7 @@ def message(request, account_slug, mbox_id, uid):
 def check_mail(request, account_slug):
     imap = get_object_or_404(IMAP, account__slug=account_slug,
                              account__profile=request.user.get_profile())
-    m = imap.get_connection()
-    for directory in imap.directories.all():
-        directory.count_messages(connection=m)
-    m.logout()
+    imap.check_mail()
 
     # TODO make sure the 'from' field is safe
     return redirect(request.GET.get('from', reverse('default_inbox')))

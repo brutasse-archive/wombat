@@ -157,7 +157,7 @@ class IMAP(models.Model):
 
         if update_counts:
             for dir_ in dirs:
-                dir_.message_counts(update=True, connection=m)
+                dir_.count_messages(update=True, connection=m)
 
         if connection is None:
             m.logout()
@@ -234,103 +234,12 @@ class Directory(models.Model):
         messages = cache.get(cache_key, None)
 
         if messages is None:
-            messages = self.message_list(number_of_messages=number_of_messages)
+            messages = self.list_messages(number_of_messages=number_of_messages)
             if messages is not None:
                 cache.set(cache_key, messages)
         return messages
 
-    def message_counts(self, connection=None, update=True):
-        """
-        Checks the number of messages on the server, depending on their
-        statuses.
-
-        Returns a dictionnary:
-        {
-            'total': the total amount of messages,
-            'unread': the number of unread messages,
-            'uidnext': the next available UID that we can assign to a message
-            'uidvalidity': this allows us to check if something has changed in
-            our back.
-        }
-        See http://tools.ietf.org/html/rfc3501#section-2.3.1.1 for details
-        about UIDs.
-
-        If the remote directory can't store messages, this returns None
-
-        This should probably be cached (here or in memcache) and refreshed
-        every <whatever> minutes when the user is online.
-        """
-        if connection is None:
-            m = self.mailbox.get_connection()
-        else:
-            m = connection
-
-        if m is None:
-            return
-
-        statuses = '(MESSAGES UIDNEXT UIDVALIDITY UNSEEN)'
-        status, response = m.status('"%s"' % utils.encode(self.name), statuses)
-        if connection is None:
-            m.logout()  # KTHXBYE
-
-        if not status == 'OK':
-            print 'Unexpected result: "%s"' % status
-            return
-
-        # 'response' looks like:
-        # ['"Archives" (MESSAGES 2423 UIDNEXT 2554 UIDVALIDITY 8 UNSEEN 0)']
-        # (it's a tuple with one element: a string)
-        search = r'MESSAGES (\d+) UIDNEXT (\d+) UIDVALIDITY (\d+) UNSEEN (\d+)'
-        numbers = re.search(search, response[0])
-        values = {
-                'total':       int(numbers.group(1)),
-                'uidnext':     int(numbers.group(2)),
-                'uidvalidity': int(numbers.group(3)),
-                'unread':      int(numbers.group(4)),
-        }
-        if update:
-            self.total = values['total']
-            self.unread = values['unread']
-            self.save()
-
-        return values
-
-    def get_uids(self, connection=None):
-        """Lists the UIDs of the messages stored in this folder.
-
-        Returns a list of the messages' UIDs"""
-        if connection is None:
-            m = self.mailbox.get_connection()
-        else:
-            m = connection
-
-        if m is None:
-            return
-
-        # Select the directory to list
-        status, response = m.select(utils.encode(self.name), readonly=True)
-
-        if not status == 'OK':
-            print 'Unexpected result: "%s"' % status
-            return
-
-        # Fetch the UIDs of the messages in this directory
-        status, ids = m.search(None, 'ALL')
-        m.close()
-
-        if not status == 'OK':
-            print 'Unexpected result: "%s"' % status
-            return
-
-        if connection is None:
-            m.logout()
-
-        uids = ids[0].split()
-        if not uids:  # No message in this list
-            return []
-        return uids
-
-    def message_list(self, number_of_messages=50, offset=0, force_uids=None,
+    def list_messages(self, number_of_messages=50, offset=0, force_uids=None,
                      connection=None):
         """
         Fetches a list of message headers from the server. This lists some of
@@ -344,11 +253,11 @@ class Directory(models.Model):
         displayed as paginated list (with, say, 50 messages per page) and we
         don't need to retrieve the whole list when we display a single page.
 
-        ``message_list(offset=50)`` will retrieve the list to show on the
+        ``list_messages(offset=50)`` will retrieve the list to show on the
         second page.
 
         ``force_uids`` can be used if you're only interested in a few
-        messages. ``message_list(force_uids=[23, 25])`` will return you the
+        messages. ``list_messages(force_uids=[23, 25])`` will return you the
         status of those two messages. It is useless to set ``offset`` and
         ``number_of_messages`` if you specify ``force_uids``.
 
@@ -453,6 +362,97 @@ class Directory(models.Model):
         messages.sort(key=lambda item: item['date'], reverse=True)
         return messages
 
+    def count_messages(self, connection=None, update=True):
+        """
+        Checks the number of messages on the server, depending on their
+        statuses.
+
+        Returns a dictionnary:
+        {
+            'total': the total amount of messages,
+            'unread': the number of unread messages,
+            'uidnext': the next available UID that we can assign to a message
+            'uidvalidity': this allows us to check if something has changed in
+            our back.
+        }
+        See http://tools.ietf.org/html/rfc3501#section-2.3.1.1 for details
+        about UIDs.
+
+        If the remote directory can't store messages, this returns None
+
+        This should probably be cached (here or in memcache) and refreshed
+        every <whatever> minutes when the user is online.
+        """
+        if connection is None:
+            m = self.mailbox.get_connection()
+        else:
+            m = connection
+
+        if m is None:
+            return
+
+        statuses = '(MESSAGES UIDNEXT UIDVALIDITY UNSEEN)'
+        status, response = m.status('"%s"' % utils.encode(self.name), statuses)
+        if connection is None:
+            m.logout()  # KTHXBYE
+
+        if not status == 'OK':
+            print 'Unexpected result: "%s"' % status
+            return
+
+        # 'response' looks like:
+        # ['"Archives" (MESSAGES 2423 UIDNEXT 2554 UIDVALIDITY 8 UNSEEN 0)']
+        # (it's a tuple with one element: a string)
+        search = r'MESSAGES (\d+) UIDNEXT (\d+) UIDVALIDITY (\d+) UNSEEN (\d+)'
+        numbers = re.search(search, response[0])
+        values = {
+                'total':       int(numbers.group(1)),
+                'uidnext':     int(numbers.group(2)),
+                'uidvalidity': int(numbers.group(3)),
+                'unread':      int(numbers.group(4)),
+        }
+        if update:
+            self.total = values['total']
+            self.unread = values['unread']
+            self.save()
+
+        return values
+
+    def get_uids(self, connection=None):
+        """Lists the UIDs of the messages stored in this folder.
+
+        Returns a list of the messages' UIDs"""
+        if connection is None:
+            m = self.mailbox.get_connection()
+        else:
+            m = connection
+
+        if m is None:
+            return
+
+        # Select the directory to list
+        status, response = m.select(utils.encode(self.name), readonly=True)
+
+        if not status == 'OK':
+            print 'Unexpected result: "%s"' % status
+            return
+
+        # Fetch the UIDs of the messages in this directory
+        status, ids = m.search(None, 'ALL')
+        m.close()
+
+        if not status == 'OK':
+            print 'Unexpected result: "%s"' % status
+            return
+
+        if connection is None:
+            m.logout()
+
+        uids = ids[0].split()
+        if not uids:  # No message in this list
+            return []
+        return uids
+
     def unread_message(self, uid, connection=None):
         if connection is None:
             m = self.mailbox.get_connection()
@@ -510,7 +510,7 @@ class Directory(models.Model):
             return
 
         status, response = m.fetch(uid, 'RFC822')
-        read = self.message_list(force_uids=[uid], connection=m)[0]['read']
+        read = self.list_messages(force_uids=[uid], connection=m)[0]['read']
         if not read:
             status, response_ = m.store(uid, '+FLAGS.SILENT', '\\Seen')
             if not status == 'OK':

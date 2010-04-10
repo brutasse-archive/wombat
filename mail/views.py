@@ -85,7 +85,7 @@ def check_mail(request, account_slug):
                              account__profile=request.user.get_profile())
     m = imap.get_connection()
     for directory in imap.directories.all():
-        directory.message_counts(connection=m)
+        directory.count_messages(connection=m)
     m.logout()
 
     # TODO make sure the 'from' field is safe

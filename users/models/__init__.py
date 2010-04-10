@@ -8,11 +8,12 @@ from django.shortcuts import get_object_or_404
 from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
 
-from users.models.imap import IMAP, Directory
+from users.models.imap import IMAP
+from mail.models import Directory
 from mail import constants
 
 # It's a package so we have to manually add the models that aren't here
-__all__ = ['IMAP', 'Directory']
+__all__ = ['IMAP',]
 
 
 class Profile(models.Model):

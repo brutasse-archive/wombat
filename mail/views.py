@@ -9,7 +9,7 @@ from decorators import account_required
 
 from mail import constants
 from mail.forms import MailForm, ActionForm, MoveForm
-from users.models import Account, Directory, IMAP
+from users.models import Account, IMAP
 
 
 @login_required

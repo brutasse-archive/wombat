@@ -11,6 +11,7 @@ from email.parser import Parser
 
 from django.db import models
 from django.db.models.signals import post_save
+from django.conf import settings
 from django.core.cache import cache
 from django.utils.html import strip_tags
 from django.utils.text import unescape_entities
@@ -20,7 +21,8 @@ import utils
 
 from mail import constants
 
-imaplib.Debug = 4
+if settings.IMAPLIB_DEBUG:
+    imaplib.Debug = 4
 
 # Useful resources regarding the IMAP implementation:
 # ===================================================

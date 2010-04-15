@@ -74,6 +74,7 @@ input[type=password], input[type=text] {width: 140px;}
  */
 
 li.unread {font-weight: bold;}
+li.unread ul {font-weight: normal;}
 
 
 /*

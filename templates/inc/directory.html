@@ -1,14 +1,13 @@
+{% load mail_tags %}
 <ul class="menu">
   {% for dir in directories %}
-  <li>
+  <li {% if dir.unread %}class="unread"{% endif %}>
   {% if dir.no_select %}
   {{ dir }}
   {% else %}
-  {% if dir.unread %}
-  <b><a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }} ({{ dir.unread }})</a></b>
-  {% else %}
-  <a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }}</a>
-  {% endif %}
+  <a href="{% url directory dir.mailbox.account.slug dir.id %}">
+    {{ dir|numberize:"unread" }}
+  </a>
   {% endif %}
   {% comment %}
   http://blog.elsdoerfer.name/2008/01/22/recursion-in-django-templates/

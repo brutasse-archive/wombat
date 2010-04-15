@@ -129,7 +129,6 @@ class IMAP(models.Model):
             pattern = '%s/%%' % directory
         (status, directories) = m.list("", pattern=pattern)
 
-        dirs = []
         if not status == 'OK':
             return
 
@@ -137,6 +136,7 @@ class IMAP(models.Model):
         if directory:
             parent = self.directories.get(name=directory)
 
+        dirs = []
         for d in directories:
             # d should look like:
             # (\HasChildren) "/" "Archives"
@@ -160,19 +160,18 @@ class IMAP(models.Model):
                 for child in children:
                     dirs.append(child)
             dir_.no_select = 'Noselect' in details[0]
+            dir_.no_inferiors = 'NoInferiors' in details[0]
             dir_.folder_type = ftype
             dir_.save()
             dirs.append(dir_)
 
         if not directory:
-            # Deleting 'old' directories. If things have changed on the server
-            # via another client for instance
+            # Deleting 'old' directories. If things have changed on
+            # the server via another client for instance
             uptodate_dirs = [d.name for d in dirs]
-            to_delete = self.directories.exclude(name__in=uptodate_dirs)
-            to_delete.delete()
+            self.directories.exclude(name__in=uptodate_dirs).delete()
 
         if update_counts:
-            # Update the directory counts
             for dir_ in dirs:
                 dir_.message_counts(update=True, connection=m)
 
@@ -202,11 +201,12 @@ class Directory(models.Model):
     mailbox = models.ForeignKey(IMAP, verbose_name=_('Mailbox'),
                                 related_name='directories')
     name = models.CharField(_('Name'), max_length=255)
-    has_children = models.BooleanField(_('Has children'), default=False)
     parent = models.ForeignKey('self', related_name='children', null=True)
 
-    # A directory may be able only to contain directories, not messages.
-    no_select = models.BooleanField(_('Can\'t store messages'), default=False)
+    # IMAP attributes
+    has_children = models.BooleanField(_('Has children'), default=False)
+    no_select = models.BooleanField(_('Cannot store messages'), default=False)
+    no_inferiors = models.BooleanField(_('Cannot store folders'), default=False)
 
     # Caching the unread & total counts directly in the DB
     unread = models.PositiveIntegerField(_('Unread messages'), default=0)
@@ -330,7 +330,7 @@ class Directory(models.Model):
             return
 
         # Select the directory to list
-        status, response = m.select(utils.encode(self.name))
+        status, response = m.select(utils.encode(self.name), readonly=True)
 
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
@@ -407,7 +407,7 @@ class Directory(models.Model):
         else:
             fetch_range = ','.join(force_uids)
 
-        status, result = m.select(utils.encode(self.name))
+        status, result = m.select(utils.encode(self.name), readonly=True)
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
             return
@@ -526,7 +526,7 @@ class Directory(models.Model):
         if m is None:
             return
 
-        status, result = m.select(utils.encode(self.name))
+        status, result = m.select(utils.encode(self.name), readonly=True)
         if not status == 'OK':
             print 'Unexpected result: "%s"' % status
             return

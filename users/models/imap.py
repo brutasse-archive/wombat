@@ -534,6 +534,8 @@ class Directory(models.Model):
         status, response = m.fetch(uid, 'RFC822')
         read = self.message_list(force_uids=[uid], connection=m)[0]['read']
         if not read:
+            status, response_ = m.close()
+            status, response_ = m.select(utils.encode(self.name))
             status, response_ = m.store(uid, '+FLAGS.SILENT', '\\Seen')
             if not status == 'OK':
                 print 'Unexpected result: "%s"' % status

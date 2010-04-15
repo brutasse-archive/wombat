@@ -110,7 +110,7 @@ class IMAP(models.Model):
         m.logout()
         return self.healthy
 
-    def update_tree(self, update_counts=True, connection=None):
+    def update_tree(self, directory="", update_counts=True, connection=None):
         """
         Updates directories statuses cached in the database.
 
@@ -124,11 +124,18 @@ class IMAP(models.Model):
         else:
             m = connection
 
-        (status, directories) = m.list()
+        pattern = '%'
+        if directory:
+            pattern = '%s/%%' % directory
+        (status, directories) = m.list("", pattern=pattern)
 
         dirs = []
         if not status == 'OK':
             return
+
+        parent = None
+        if directory:
+            parent = self.directories.get(name=directory)
 
         for d in directories:
             # d should look like:
@@ -137,6 +144,8 @@ class IMAP(models.Model):
             # (\HasNoChildren) "/" "Archives/Web"
             # Or even
             # (\Noselect \HasChildren) "/" "[Gmail]"
+            if not d:
+                continue
             details = d.split('"')
             name = utils.decode(details[-2])
 
@@ -144,17 +153,23 @@ class IMAP(models.Model):
 
             dir_, created = Directory.objects.get_or_create(mailbox=self,
                                                             name=name)
+            dir_.parent = parent
             dir_.has_children = 'HasChildren' in details[0]
+            if dir_.has_children:
+                children = self.update_tree(directory=name, connection=m)
+                for child in children:
+                    dirs.append(child)
             dir_.no_select = 'Noselect' in details[0]
             dir_.folder_type = ftype
             dir_.save()
             dirs.append(dir_)
 
-        # Deleting 'old' directories. If things have changed on the server
-        # via another client for instance
-        uptodate_dirs = [d.name for d in dirs]
-        to_delete = self.directories.exclude(name__in=uptodate_dirs)
-        to_delete.delete()
+        if not directory:
+            # Deleting 'old' directories. If things have changed on the server
+            # via another client for instance
+            uptodate_dirs = [d.name for d in dirs]
+            to_delete = self.directories.exclude(name__in=uptodate_dirs)
+            to_delete.delete()
 
         if update_counts:
             # Update the directory counts
@@ -164,6 +179,8 @@ class IMAP(models.Model):
         if connection is None:
             m.logout()
 
+        if directory:
+            return dirs
         return len(dirs)
 
 
@@ -186,6 +203,7 @@ class Directory(models.Model):
                                 related_name='directories')
     name = models.CharField(_('Name'), max_length=255)
     has_children = models.BooleanField(_('Has children'), default=False)
+    parent = models.ForeignKey('self', related_name='children', null=True)
 
     # A directory may be able only to contain directories, not messages.
     no_select = models.BooleanField(_('Can\'t store messages'), default=False)
@@ -200,7 +218,7 @@ class Directory(models.Model):
                                       default=constants.NORMAL, db_index=True)
 
     class Meta:
-        ordering = ('name',)
+        ordering = ('folder_type', 'name')
         verbose_name_plural = _('Directories')
         app_label = 'users'
 
@@ -209,6 +227,9 @@ class Directory(models.Model):
             if self.folder_type == constants.OTHER:
                 return self.name.replace('[Gmail]/', '')  # XXX GMail-only Fix
             return self.get_folder_type_display()
+
+        if self.parent:
+            return self.name.replace(self.parent.name + '/', '')
         return self.name
 
     def get_message(self, uid):
@@ -594,6 +615,7 @@ def _clean_header(header):
         assembled += '%s%s' % (separator, decoded)
     return assembled
 
+
 def _guess_folder_type(name):
     """
     Guesses the type of the folder given its name. Returns a constant to put
@@ -614,6 +636,9 @@ def _guess_folder_type(name):
     if name in ('trash', '[gmail]/trash'):
         return constants.TRASH
 
-    if name.startswith('[gmail]/'):
+    if name in ('spam', 'junk', '[gmail]/spam'):
+        return constants.SPAM
+
+    if name.startswith('[gmail]'):
         return constants.OTHER
     return constants.NORMAL

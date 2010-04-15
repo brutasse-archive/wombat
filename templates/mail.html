@@ -57,16 +57,14 @@
 <a href="{% url compose %}">Compose</a>
 {% endif %}
 <h2><a href="{% url account_inbox account.slug %}">{{ account.name }}</a></h2>
-<ul class="menu">
-  {% for dir in account.special_directories %}
-  {% include "inc/directory.html" %}
-  {% endfor %}
-</ul>
 
-<ul class="menu">
-  {% for dir in account.imap_directories %}
-  {% include "inc/directory.html" %}
-  {% endfor %}
-</ul>
+{% with account.special_directories as directories %}
+{% include "inc/directory.html" %}
+{% endwith %}
+
+{% with account.imap_directories as directories %}
+{% include "inc/directory.html" %}
+{% endwith %}
+
 {% endfor %}
 {% endblock %}

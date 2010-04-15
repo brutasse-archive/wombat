@@ -1,9 +1,26 @@
-{% if not dir.no_select %}
-<li>
-{% if dir.unread %}
-<b><a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }} ({{ dir.unread }})</a></b>
-{% else %}
-<a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }}</a>
-{% endif %}
-</li>
-{% endif %}
+<ul class="menu">
+  {% for dir in directories %}
+  <li>
+  {% if dir.no_select %}
+  {{ dir }}
+  {% else %}
+  {% if dir.unread %}
+  <b><a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }} ({{ dir.unread }})</a></b>
+  {% else %}
+  <a href="{% url directory dir.mailbox.account.slug dir.id %}">{{ dir }}</a>
+  {% endif %}
+  {% endif %}
+  {% comment %}
+  http://blog.elsdoerfer.name/2008/01/22/recursion-in-django-templates/
+  Passing the filename as a variable enables recursion
+  {% endcomment %}
+  {% with "inc/directory.html" as filename %}
+  {% with dir.children.all as directories %}
+  {% if directories %}
+  {% include filename %}
+  {% endif %}
+  {% endwith %}
+  {% endwith %}
+  </li>
+  {% endfor %}
+</ul>

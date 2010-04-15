@@ -1,5 +1,7 @@
-from django import template
 import datetime
+
+from django import template
+from django.utils.tzinfo import LocalTimezone
 
 register = template.Library()
 
@@ -21,7 +23,8 @@ def hour_or_date(datetime_instance):
      * If the date is today, only display the hour
      * if the date is before today, display the day+month"""
     today = datetime.date.today()
-    today_midnight = datetime.datetime(today.year, today.month, today.day)
+    today_midnight = datetime.datetime(today.year, today.month, today.day,
+            tzinfo=LocalTimezone(datetime.datetime.now()))
     if datetime_instance > today_midnight:
         time_format = '%H:%M'
     else:

@@ -562,7 +562,22 @@ class Directory(models.Model):
         Returns a datetime.datetime instance given an IMAP date string
         """
         time_tuple = email.utils.parsedate_tz(date_string)
-        return datetime.datetime(*time_tuple[:6])
+
+        class ZoneInfo(datetime.tzinfo):
+            def utcoffset(self, dt):
+                return datetime.timedelta(seconds=time_tuple[9])
+
+            def tzname(self, dt):
+                hours = time_tuple[9] / 3600
+                if hours < 0:
+                    return "GMT %s" % hours
+                return "GMT +%s" % hours
+
+            def dst(self, dt):
+                return datetime.timedelta(0)
+
+        dt = datetime.datetime(*time_tuple[:6], tzinfo=ZoneInfo())
+        return dt
 
 
 class Message(object):

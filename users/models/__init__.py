@@ -118,8 +118,7 @@ class Account(models.Model):
 
 
 def account_pre_save(sender, instance, **kwargs):
-    if not instance.slug:
-        # TODO make sure the slug is unique and doesn't conflict with URLs
-        instance.slug = slugify(instance.name)
+    # TODO make sure the slug is unique and doesn't conflict with URLs
+    instance.slug = slugify(instance.name)
 
 models.signals.pre_save.connect(account_pre_save, sender=Account)

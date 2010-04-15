@@ -103,14 +103,14 @@ class Account(models.Model):
         self.imap.delete()
         super(Account, self).delete()
 
-    def special_directories(self):
-        """Returns all the special directories: inbox, outbox, etc."""
+    def common_directories(self):
+        """Returns all the common directories: inbox, outbox, etc."""
         if self.imap:
             dirs = self.imap.directories.exclude(folder_type=constants.NORMAL).exclude(name__iexact='[gmail]')
             return dirs.order_by('folder_type')
         return []
 
-    def imap_directories(self):
+    def custom_directories(self):
         """ Return the list of Directories. """
         if self.imap:
             return self.imap.directories.filter(folder_type=constants.NORMAL, parent__isnull=True)

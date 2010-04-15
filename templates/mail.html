@@ -58,11 +58,11 @@
 {% endif %}
 <h2><a href="{% url account_inbox account.slug %}">{{ account.name }}</a></h2>
 
-{% with account.special_directories as directories %}
+{% with account.common_directories as directories %}
 {% include "inc/directory.html" %}
 {% endwith %}
 
-{% with account.imap_directories as directories %}
+{% with account.custom_directories as directories %}
 {% include "inc/directory.html" %}
 {% endwith %}
 

@@ -622,6 +622,8 @@ def _clean_header(header):
     function cleans all of this and return a beautiful, utf-8 encoded
     header.
     """
+    if header.startswith('"'):
+        header = header.replace('"', '')
     cleaned = email.header.decode_header(header)
     assembled = ''
     for element in cleaned:

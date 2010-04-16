@@ -85,7 +85,7 @@ class Account(models.Model):
     """
     name = models.CharField(_('Name'), max_length=255, default=_('Default'))
     slug = models.SlugField(_('Slug'))
-    email = models.EmailField(_('Mail addresse'), default='john.bob@wmail.org')
+    email = models.EmailField(_('Email address'), default='john.bob@wmail.org')
 
     profile = models.ForeignKey(Profile, verbose_name=_('Profile'),
                                          related_name='accounts')

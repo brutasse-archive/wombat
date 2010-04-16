@@ -3,7 +3,7 @@
 {% block panel %}
 {% include 'inc/message_menu.html' %}
 <div class="message">
-  <p>{{ message.body|linebreaks }}</p>
+  <p>{{ message.body|urlize|linebreaks}}</p>
 </div>
 {% include 'inc/message_menu.html' %}
 {% endblock %}

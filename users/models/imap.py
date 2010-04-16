@@ -541,6 +541,8 @@ class Directory(models.Model):
             status, response_ = m.store(uid, '+FLAGS.SILENT', '\\Seen')
             if not status == 'OK':
                 print 'Unexpected result: "%s"' % status
+            self.unread = self.unread - 1
+            self.save()
 
         m.close()
         if connection is None:

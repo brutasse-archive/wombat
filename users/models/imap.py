@@ -541,7 +541,7 @@ class Directory(models.Model):
             status, response_ = m.store(uid, '+FLAGS.SILENT', '\\Seen')
             if not status == 'OK':
                 print 'Unexpected result: "%s"' % status
-            self.unread = self.unread - 1
+            self.unread = max(self.unread - 1, 0)
             self.save()
 
         m.close()

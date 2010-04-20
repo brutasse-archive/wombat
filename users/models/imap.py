@@ -42,6 +42,7 @@ if 'test' in os.environ['DJANGO_SETTINGS_MODULE']:
 
 FLAG_RE = re.compile(r'^(\d+) .* FLAGS \(([^\)]*)\)')
 BODY_RE = re.compile(r'BODYSTRUCTURE \((.+)\)')
+HEADER_RE = re.compile(r'^([a-zA-Z0-9_-]+):(.*)$')
 
 
 class IMAP(models.Model):
@@ -461,15 +462,20 @@ class Directory(models.Model):
 
             headers = msg[1].split('\r\n')
             for header in headers:
-                if not header or not ':' in header:
+                if not header:
                     continue
-                (key, value) = header.split(':', 1)
-                value = _clean_header(value.strip())
-                key = key.lower()
-                message[key] = value
+                full_header = HEADER_RE.search(header)
+                if full_header:
+                    (key, value) = full_header.group(1), \
+                                   _clean_header(full_header.group(2).strip())
+                    key = key.lower()
+                    message[key] = value
+                else:  # It's the previous iteration, continued
+                    message[key] += _clean_header(header)
+
                 if key == 'date':
                     message[key] = self._imap_to_datetime(value)
-                elif key in ('from', 'to'):
+                elif key == 'from':
                     message[key] = email.utils.parseaddr(value)
 
             messages.append(message)
@@ -583,12 +589,10 @@ class Directory(models.Model):
 
 
 class Message(object):
-    raw = ''
-    headers = {}
-    body = u''
-    html_body = u''
-
     def __init__(self, content):
+        self.headers = {}
+        self.body = u''
+        self.html_body = u''
         self.raw = content
         self.parse()
 

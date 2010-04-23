@@ -5,6 +5,7 @@ import email.parser
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.utils.html import strip_tags
 
 from users.models import IMAP
 from mail import constants
@@ -13,6 +14,7 @@ import utils
 
 FLAG_RE = re.compile(r'^(\d+) .* FLAGS \(([^\)]*)\)')
 BODY_RE = re.compile(r'BODYSTRUCTURE \((.+)\)')
+HEADER_RE = re.compile(r'^([a-zA-Z0-9_-]+):(.*)$')
 
 
 class Directory(models.Model):
@@ -24,6 +26,7 @@ class Directory(models.Model):
     mailbox = models.ForeignKey(IMAP, verbose_name=_('Mailbox'),
                                 related_name='directories')
     name = models.CharField(_('Name'), max_length=255)
+    parent = models.ForeignKey('self', related_name='children', null=True)
 
     # IMAP attributes
     has_children = models.BooleanField(_('Has children'), default=False)
@@ -49,6 +52,9 @@ class Directory(models.Model):
             if self.folder_type == constants.OTHER:
                 return self.name.replace('[Gmail]/', '')  # XXX GMail-only Fix
             return self.get_folder_type_display()
+
+        if self.parent:
+            return self.name.replace(self.parent.name + '/', '')
         return self.name
 
     def get_message(self, uid):
@@ -169,10 +175,15 @@ class Directory(models.Model):
             for header in headers:
                 if not header or not ':' in header:
                     continue
-                (key, value) = header.split(':', 1)
-                value = Message._clean_header(value.strip())
-                key = key.lower()
-                message[key] = value
+                   full_header = HEADER_RE.search(header)
+                if full_header:
+                    (key, value) = full_header.group(1), \
+                                   _clean_header(full_header.group(2).strip())
+                    key = key.lower()
+                    message[key] = value
+                else:  # It's the previous iteration, continued
+                    message[key] += _clean_header(header)
+
                 if key == 'date':
                     message[key] = self._imap_to_datetime(value)
                 elif key in ('from', 'to'):
@@ -333,9 +344,13 @@ class Directory(models.Model):
         status, response = m.fetch(uid, 'RFC822')
         read = self.list_messages(force_uids=[uid], connection=m)[0]['read']
         if not read:
+            status, response_ = m.close()
+            status, response_ = m.select(utils.encode(self.name))
             status, response_ = m.store(uid, '+FLAGS.SILENT', '\\Seen')
             if not status == 'OK':
                 print 'Unexpected result: "%s"' % status
+            self.unread = max(self.unread - 1, 0)
+            self.save()
 
         m.close()
         if connection is None:
@@ -356,21 +371,34 @@ class Directory(models.Model):
         """
         Returns a datetime.datetime instance given an IMAP date string
         """
-        import datetime
         time_tuple = email.utils.parsedate_tz(date_string)
-        return datetime.datetime(*time_tuple[:6])
+
+        class ZoneInfo(datetime.tzinfo):
+            def utcoffset(self, dt):
+                return datetime.timedelta(seconds=time_tuple[9])
+
+            def tzname(self, dt):
+                hours = time_tuple[9] / 3600
+                if hours < 0:
+                    return "GMT %s" % hours
+                return "GMT +%s" % hours
+
+            def dst(self, dt):
+                return datetime.timedelta(0)
+
+        dt = datetime.datetime(*time_tuple[:6], tzinfo=ZoneInfo())
+        return dt
+
 
 
 class Message(models.Model):
     uid = models.PositiveIntegerField()
     dir = models.ForeignKey(Directory)
 
-    raw = ''
-    headers = {}
-    body = u''
-    html_body = u''
-
     def __init__(self, content):
+        self.headers = {}
+        self.body = u''
+        self.html_body = u''
         self.raw = content
         self.parse()
 
@@ -404,6 +432,8 @@ class Message(models.Model):
         function cleans all of this and return a beautiful, utf-8 encoded
         header.
         """
+        if header.startswith('"'):
+            header = header.replace('"', '')
         cleaned = email.header.decode_header(header)
         assembled = ''
         for element in cleaned:

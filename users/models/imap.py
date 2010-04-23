@@ -8,7 +8,7 @@ import email.header
 
 from django.db import models
 from django.db.models.signals import post_save
-from django.utils.html import strip_tags
+from django.conf import settings
 from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
 
@@ -16,7 +16,8 @@ import utils
 
 from mail import constants
 
-imaplib.Debug = 4
+if settings.IMAPLIB_DEBUG:
+    imaplib.Debug = 4
 
 # Useful resources regarding the IMAP implementation:
 # ===================================================
@@ -118,7 +119,7 @@ class IMAP(models.Model):
             directory.count_messages(connection=m)
         m.logout()
 
-    def update_tree(self, update_counts=True, connection=None):
+    def update_tree(self, directory="", update_counts=True, connection=None):
         """
         Updates directories statuses cached in the database.
 
@@ -132,10 +133,17 @@ class IMAP(models.Model):
         else:
             m = connection
 
-        (status, directories) = m.list()
+        pattern = '%'
+        if directory:
+            pattern = '%s/%%' % directory
+        (status, directories) = m.list("", pattern=pattern)
 
         if not status == 'OK':
             return
+
+        parent = None
+        if directory:
+            parent = self.directories.get(name=directory)
 
         dirs = []
         for d in directories:
@@ -145,6 +153,8 @@ class IMAP(models.Model):
             # (\HasNoChildren) "/" "Archives/Web"
             # Or even
             # (\Noselect \HasChildren) "/" "[Gmail]"
+            if not d:
+                continue
             details = d.split('"')
             name = utils.decode(details[-2])
 
@@ -152,16 +162,23 @@ class IMAP(models.Model):
 
             dir_, created = Directory.objects.get_or_create(mailbox=self,
                                                             name=name)
+            dir_.parent = parent
             dir_.has_children = 'HasChildren' in details[0]
+            if dir_.has_children:
+                children = self.update_tree(directory=name, connection=m)
+                for child in children:
+                    dirs.append(child)
             dir_.no_select = 'Noselect' in details[0]
             dir_.no_inferiors = 'NoInferiors' in details[0]
             dir_.folder_type = ftype
             dir_.save()
             dirs.append(dir_)
 
-        # Deleting 'old' directories. If things have changed on the
-        # server via another client for instance
-        self.directories.exclude(name__in=[d.name for d in dirs]).delete()
+        if not directory:
+            # Deleting 'old' directories. If things have changed on
+            # the server via another client for instance
+            uptodate_dirs = [d.name for d in dirs]
+            self.directories.exclude(name__in=uptodate_dirs).delete()
 
         if update_counts:
             for dir_ in dirs:
@@ -170,6 +187,8 @@ class IMAP(models.Model):
         if connection is None:
             m.logout()
 
+        if directory:
+            return dirs
         return len(dirs)
 
 
@@ -202,6 +221,9 @@ def _guess_folder_type(name):
     if name in ('trash', '[gmail]/trash'):
         return constants.TRASH
 
-    if name.startswith('[gmail]/'):
+    if name in ('spam', 'junk', '[gmail]/spam'):
+        return constants.SPAM
+
+    if name.startswith('[gmail]'):
         return constants.OTHER
     return constants.NORMAL

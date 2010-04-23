@@ -86,7 +86,7 @@ class Account(models.Model):
     """
     name = models.CharField(_('Name'), max_length=255, default=_('Default'))
     slug = models.SlugField(_('Slug'))
-    email = models.EmailField(_('Mail addresse'), default='john.bob@wmail.org')
+    email = models.EmailField(_('Email address'), default='john.bob@wmail.org')
 
     profile = models.ForeignKey(Profile, verbose_name=_('Profile'),
                                          related_name='accounts')
@@ -104,23 +104,22 @@ class Account(models.Model):
         self.imap.delete()
         super(Account, self).delete()
 
-    def special_directories(self):
-        """Returns all the special directories: inbox, outbox, etc."""
+    def common_directories(self):
+        """Returns all the common directories: inbox, outbox, etc."""
         if self.imap:
-            dirs = self.imap.directories.exclude(folder_type=constants.NORMAL)
+            dirs = self.imap.directories.exclude(folder_type=constants.NORMAL).exclude(name__iexact='[gmail]')
             return dirs.order_by('folder_type')
         return []
 
-    def imap_directories(self):
+    def custom_directories(self):
         """ Return the list of Directories. """
         if self.imap:
-            return self.imap.directories.filter(folder_type=constants.NORMAL)
+            return self.imap.directories.filter(folder_type=constants.NORMAL, parent__isnull=True)
         return []
 
 
 def account_pre_save(sender, instance, **kwargs):
-    if not instance.slug:
-        # TODO make sure the slug is unique and doesn't conflict with URLs
-        instance.slug = slugify(instance.name)
+    # TODO make sure the slug is unique and doesn't conflict with URLs
+    instance.slug = slugify(instance.name)
 
 models.signals.pre_save.connect(account_pre_save, sender=Account)

@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 
 class DirAdmin(admin.ModelAdmin):
     list_display = ('name', 'mailbox', 'has_children', 'no_select',
-                    'unread', 'total')
+                    'unread', 'total', 'parent')
 
 
 class ProfileInline(admin.StackedInline):

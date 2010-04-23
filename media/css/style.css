@@ -13,7 +13,7 @@ body {
 html, body, #container {padding: 0; margin: 0; height: 100%;}
 
 img {border: 0;}
-ul {margin: 0; padding: 0; list-style-type: none;}
+ul {margin: 0 1em; padding: 0; list-style-type: none;}
 
 a {color: #06c; text-decoration: none;}
 a:hover {color: #f17912;}
@@ -74,6 +74,7 @@ input[type=password], input[type=text] {width: 140px;}
  */
 
 li.unread {font-weight: bold;}
+li.unread ul {font-weight: normal;}
 
 
 /*

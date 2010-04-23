@@ -3,7 +3,14 @@
 {% block panel %}
 {% include 'inc/message_menu.html' %}
 <div class="message">
-  <p>{{ message.body|linebreaks }}</p>
+  <h2>{{ message.headers.subject|default:_("No subject") }}</h2>
+  <ul class="headers">
+    <li>From: {{ message.headers.from }}</li>
+    <li>To: {{ message.headers.to }}</li>
+    {% if message.headers.cc %}<li>Cc: {{ message.headers.cc }}</li>{% endif %}
+    <li>Date: {{ message.headers.date }}</li>
+  </ul>
+  <p>{{ message.body|urlize|linebreaks}}</p>
 </div>
 {% include 'inc/message_menu.html' %}
 {% endblock %}

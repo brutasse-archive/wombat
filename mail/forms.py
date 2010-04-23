@@ -51,4 +51,4 @@ class MoveForm(ActionForm):
                 folder_type=constants.NORMAL).order_by('name'):
             if exclude is not None and directory == exclude:
                 continue
-            yield ('%s' % directory.id, u'%s' % directory)
+            yield ('%s' % directory.id, u'%s' % directory.name)

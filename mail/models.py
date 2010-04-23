@@ -2,6 +2,7 @@
 
 import re
 import email.parser
+import datetime
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -175,14 +176,14 @@ class Directory(models.Model):
             for header in headers:
                 if not header or not ':' in header:
                     continue
-                   full_header = HEADER_RE.search(header)
+                full_header = HEADER_RE.search(header)
                 if full_header:
                     (key, value) = full_header.group(1), \
-                                   _clean_header(full_header.group(2).strip())
+                                   Message._clean_header(full_header.group(2).strip())
                     key = key.lower()
                     message[key] = value
                 else:  # It's the previous iteration, continued
-                    message[key] += _clean_header(header)
+                    message[key] += Message._clean_header(header)
 
                 if key == 'date':
                     message[key] = self._imap_to_datetime(value)
@@ -386,9 +387,8 @@ class Directory(models.Model):
             def dst(self, dt):
                 return datetime.timedelta(0)
 
-        dt = datetime.datetime(*time_tuple[:6], tzinfo=ZoneInfo())
+        dt = datetime.datetime(tzinfo=ZoneInfo(), *time_tuple[:6])
         return dt
-
 
 
 class Message(models.Model):

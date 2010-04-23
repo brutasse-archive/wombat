@@ -160,6 +160,7 @@ class IMAP(models.Model):
 
             ftype = _guess_folder_type(name.lower())
 
+            from mail.models import Directory  # XXX
             dir_, created = Directory.objects.get_or_create(mailbox=self,
                                                             name=name)
             dir_.parent = parent

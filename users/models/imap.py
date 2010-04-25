@@ -9,7 +9,6 @@ import email.header
 from django.db import models
 from django.db.models.signals import post_save
 from django.conf import settings
-from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
 
 import utils

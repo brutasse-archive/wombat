@@ -5,6 +5,7 @@ import email.parser
 import datetime
 
 from django.db import models
+from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
 from django.utils.html import strip_tags
 
@@ -59,8 +60,12 @@ class Directory(models.Model):
         return self.name
 
     def get_message(self, uid):
-        message = self._fetch_message(uid)
-        return message
+        m = self.mailbox.get_connection()
+        msg = Message(uid)
+        msg.fetch(m, utils.encode(self.name))
+        m.close()
+        m.logout()
+        return msg
 
     def get_messages(self, page):
         number_of_messages = min(self.total, 50)
@@ -136,7 +141,6 @@ class Directory(models.Model):
                                     'ID References In-Reply-To)]'
                                     ' BODYSTRUCTURE)'))
 
-        # We're done with the IMAP
         if connection is None:
             m.logout()
 
@@ -144,9 +148,6 @@ class Directory(models.Model):
             print 'Fetching headers returned %s (message %s)' % (status,
                                                                  response)
             return
-
-        # The list to fill with message info
-        messages = []
 
         # FIXME -- Some servers return 2 responses: one for FLAGS+headers,
         # one for BODYSTRUCTURE. This hack moves a double response into a
@@ -159,40 +160,14 @@ class Directory(models.Model):
                 rsp.append([msg, response[i][1]])
             response = rsp
 
+        messages = []
         for msg in response:
-            content = msg[0]
-            if content == ')':  # That's an imaplib weirdness
+            if msg[0] == ')':  # XXX That's an imaplib weirdness
                 continue
-
-            flags = FLAG_RE.search(content)
-            bodystructure = BODY_RE.search(content)
-            message = {
-                'uid': int(flags.group(1)),
-                'read': 'Seen' in flags.group(2).replace('\\', ''),
-                'attachment': 'attachment' in bodystructure.group(1).lower(),
-            }
-
-            headers = msg[1].split('\r\n')
-            for header in headers:
-                if not header or not ':' in header:
-                    continue
-                full_header = HEADER_RE.search(header)
-                if full_header:
-                    (key, value) = full_header.group(1), \
-                                   Message._clean_header(full_header.group(2).strip())
-                    key = key.lower()
-                    message[key] = value
-                else:  # It's the previous iteration, continued
-                    message[key] += Message._clean_header(header)
-
-                if key == 'date':
-                    message[key] = self._imap_to_datetime(value)
-                elif key in ('from', 'to'):
-                    message[key] = email.utils.parseaddr(value)
-
+            message = Message(content=msg)
             messages.append(message)
 
-        messages.sort(key=lambda item: item['date'], reverse=True)
+        messages.sort(key=lambda msg: msg.date, reverse=True)
         return messages
 
     def count_messages(self, connection=None, update=True):
@@ -323,94 +298,78 @@ class Directory(models.Model):
         trash = self.mailbox.directories.filter(folder_type=constants.TRASH).get()
         return self.move_message(uid, trash.name, connection=connection)
 
-    def _fetch_message(self, uid, connection=None):
-        """
-        Fetches a full message from this diretcory, given its UID.
-
-        Returns a ``Message`` instance.
-        """
-        if connection is None:
-            m = self.mailbox.get_connection()
-        else:
-            m = connection
-
-        if m is None:
-            return
-
-        status, result = m.select(utils.encode(self.name), readonly=True)
-        if not status == 'OK':
-            print 'Unexpected result: "%s"' % status
-            return
-
-        status, response = m.fetch(uid, 'RFC822')
-        read = self.list_messages(force_uids=[uid], connection=m)[0]['read']
-        if not read:
-            status, response_ = m.close()
-            status, response_ = m.select(utils.encode(self.name))
-            status, response_ = m.store(uid, '+FLAGS.SILENT', '\\Seen')
-            if not status == 'OK':
-                print 'Unexpected result: "%s"' % status
-            self.unread = max(self.unread - 1, 0)
-            self.save()
-
-        m.close()
-        if connection is None:
-            m.logout()
-
-        if not status == 'OK':
-            print 'Unexpected result: "%s"' % status
-            return
-
-        # Response[0] only is interesting, it is a tuple
-        # response[0][0]: '9 (RFC822 {4854}'
-        # response[0][1]: the raw email (source)
-        raw_email = response[0][1]
-
-        return Message(raw_email)
-
-    def _imap_to_datetime(self, date_string):
-        """
-        Returns a datetime.datetime instance given an IMAP date string
-        """
-        time_tuple = email.utils.parsedate_tz(date_string)
-
-        class ZoneInfo(datetime.tzinfo):
-            def utcoffset(self, dt):
-                return datetime.timedelta(seconds=time_tuple[9])
-
-            def tzname(self, dt):
-                hours = time_tuple[9] / 3600
-                if hours < 0:
-                    return "GMT %s" % hours
-                return "GMT +%s" % hours
-
-            def dst(self, dt):
-                return datetime.timedelta(0)
-
-        dt = datetime.datetime(tzinfo=ZoneInfo(), *time_tuple[:6])
-        return dt
-
 
 class Message(models.Model):
     uid = models.PositiveIntegerField()
     dir = models.ForeignKey(Directory)
+    read = models.BooleanField()
 
-    def __init__(self, content):
-        self.headers = {}
+    def __init__(self, uid=None, content=None):
+        self.uid = uid
+        self.read = False
         self.body = u''
         self.html_body = u''
-        self.raw = content
-        self.parse()
+        self.attachment = None
 
-    def parse(self):
-        """Fetches the content of the message and populates the available
-        headers"""
-        p = email.parser.Parser()
-        message = p.parsestr(self.raw)
-        for part in message.walk():
+        if content:
+            self._create_from_content(content)
+
+    def _create_from_content(self, content):
+        flags = FLAG_RE.search(content[0])
+        self.uid  = int(flags.group(1))
+        self.read = 'Seen' in flags.group(2).replace('\\', '')
+
+        bodystructure = BODY_RE.search(content[0])
+        self.attachment = 'attachment' in bodystructure.group(1).lower()
+
+        for header in content[1].split('\r\n'):
+            if not header or not ':' in header:  # XXX
+                continue
+
+            full_header = HEADER_RE.search(header)
+            if full_header:
+                (key, value) = full_header.group(1), \
+                               self._clean_header(full_header.group(2).strip())
+                key = key.lower()
+            else:  # It's the previous iteration, continued
+                value = getattr(self, key) + self._clean_header(header)
+            setattr(self, key, value)
+
+            if key == 'date':
+                self.date = self._imap_to_datetime(value)
+            elif key in ('from', 'to'):
+                setattr(self, key, email.utils.parseaddr(value))
+
+    def fetch(self, m, dirname):
+        """
+        Fetches message content from the server.
+        """
+        status, result = m.select(dirname, readonly=True)
+
+        if not status == 'OK':
+            print 'Unexpected result: "%s"' % status
+            return
+
+        status, response = m.fetch(self.uid, 'RFC822')
+
+        if not status == 'OK':
+            print 'Unexpected result: "%s"' % status
+
+        # Response[0] only is interesting, it is a tuple
+        # response[0][0]: '9 (RFC822 {4854}'
+        # response[0][1]: the raw email (source)
+        self.parse(response[0][1])
+
+    def parse(self, raw_email):
+        """
+        Fetches the content of the message and populates the available headers
+        """
+
+        msg = email.parser.Parser().parsestr(raw_email)
+        for part in msg.walk():
             charset = part.get_content_charset()
             for header, to_clean in part.items():
-                self.headers[header.lower()] = self._clean_header(to_clean)
+                setattr(self, header.lower(), self._clean_header(to_clean))
 
             payload = part.get_payload(decode=1)
             if charset is not None:
@@ -447,3 +406,28 @@ class Message(models.Model):
                 decoded = element[0]
             assembled += '%s%s' % (separator, decoded)
         return assembled
+
+    @classmethod
+    def _imap_to_datetime(self, date_string):
+        """
+        Returns a datetime.datetime instance given an IMAP date string
+        """
+        time_tuple = email.utils.parsedate_tz(date_string)
+
+        class ZoneInfo(datetime.tzinfo):
+            def utcoffset(self, dt):
+                return datetime.timedelta(seconds=time_tuple[9])
+
+            def tzname(self, dt):
+                hours = time_tuple[9] / 3600
+                if hours < 0:
+                    return "GMT %s" % hours
+                return "GMT +%s" % hours
+
+            def dst(self, dt):
+                return datetime.timedelta(0)
+
+        dt = datetime.datetime(tzinfo=ZoneInfo(), *time_tuple[:6])
+        return dt
+
+

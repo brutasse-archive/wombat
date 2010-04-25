@@ -366,12 +366,13 @@ class Message(models.Model):
         """
 
         msg = email.parser.Parser().parsestr(raw_email)
+
         for part in msg.walk():
-            charset = part.get_content_charset()
-            for header, to_clean in part.items():
-                setattr(self, header.lower(), self._clean_header(to_clean))
+            for key, header in part.items():
+                setattr(self, key.lower(), self._clean_header(header))
 
             payload = part.get_payload(decode=1)
+            charset = part.get_content_charset()
             if charset is not None:
                 payload = payload.decode(charset)
 
@@ -380,6 +381,7 @@ class Message(models.Model):
 
             if part.get_content_type() == 'text/html':
                 self.html_body += payload
+
         if not self.body:
             self.body = unescape_entities(strip_tags(self.html_body))
 

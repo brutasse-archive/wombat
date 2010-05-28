@@ -6,6 +6,7 @@
 {% block form %}
 <div class="form">
   <form action="{% url edit_account account.id %}" method="post">
+    {% csrf_token %}
     <h1>{% trans 'Edit' %} {{ account }}</h1>
     {% if submitted and success %}
     <p>{% trans 'Your account has been successfully modified' %}</p>

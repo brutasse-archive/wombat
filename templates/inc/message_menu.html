@@ -2,17 +2,17 @@
 <p class="inline">
   <a href="{% url directory directory.mailbox.account.slug directory.id %}">back to <b>{{ directory }}</b></a>
 </p>
-<form method="post" action="." class="inline">
+<form method="post" action="." class="inline"> {% csrf_token %}
   {% with move_form as form %}{% include 'inc/inline_form.html' %}{% endwith %}
   <p class="inline"><input type="submit" value="{% trans 'Move' %}"/></p>
 </form>
 
-<form method="post" action="." class="inline">
+<form method="post" action="." class="inline"> {% csrf_token %}
   {% with unread_form as form %}{% include 'inc/inline_form.html' %}{% endwith %}
   <p class="inline"><input type="submit" value="{% trans 'Mark as unread' %}"/></p>
 </form>
 
-<form method="post" action="." class="inline">
+<form method="post" action="." class="inline"> {% csrf_token %}
   {% with delete_form as form %}{% include 'inc/inline_form.html' %}{% endwith %}
   <p class="inline"><input type="submit" value="{% trans 'Delete' %}"/></p>
 </form>

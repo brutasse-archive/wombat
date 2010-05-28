@@ -7,6 +7,7 @@
 {% block form %}
   <div>
   <form action="{% url settings %}" method="post">
+    {% csrf_token %}
     {{ form.as_p }}
     <p><label>&nbsp;</label><input type="submit" value="{% trans 'Save Changes' %}" /></p>
   </form>

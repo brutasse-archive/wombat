@@ -1,9 +1,12 @@
-# From http://www.djangosnippets.org/snippets/74/#c195
-from django.contrib.auth.backends import ModelBackend
-from django.forms.fields import email_re
+
+from django.core.validators import email_re
 from django.contrib.auth.models import User
+from django.contrib.auth.backends import ModelBackend
 
 class EmailAuthBackend(ModelBackend):
+    """
+     From http://www.djangosnippets.org/snippets/74/#c195
+    """
     def authenticate(self, username=None, password=None):
         if email_re.search(username):
             try:

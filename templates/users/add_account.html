@@ -6,6 +6,7 @@
 {% block form %}
 <div class="form">
   <form action="{% url add_account %}" method="post">
+    {% csrf_token %}
     <h1>Add an account</h1>
     {% if submitted and success %}
     <p>{% trans 'Your account has been successfully created' %}</p>

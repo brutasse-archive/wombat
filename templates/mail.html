@@ -8,6 +8,7 @@
 <div id="header">
   <div id="search">
     <form action="/search/" method="post" id="search-form">
+      {% csrf_token %}
       <p>
         <input type="text" name="search" id="id_search" size="20" value="" />
         <input type="submit" value="Search" />

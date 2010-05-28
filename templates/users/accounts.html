@@ -5,6 +5,7 @@
 
 {% block form %}
 	<div class="form">
+    {% csrf_token %}
 		<ul>
             {% for a in accounts %}
             <li>{{ a }}

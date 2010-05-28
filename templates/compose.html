@@ -1,17 +1,13 @@
 {% extends "mail.html" %}
 {% load i18n %}
 
-{% block title %}Wombat | {% trans 'Compose' %}{% endblock %}
+{% block title %}{% trans 'Compose' %}{% endblock %}
 
 
 {% block panel %}
   <div class="form">
 	<form action="{% url compose %}" method="post">
-    <p>
-      <label>&nbsp;</label><input type="submit" value="{% trans 'Send' %}" />
-      <label>&nbsp;</label><input type="submit" value="{% trans 'Save' %}" />
-      <label>&nbsp;</label><input type="submit" value="{% trans 'Discard' %}" />
-    </p>
+    {% csrf_token %}
     {{ form.as_p }}
     <p>
       <label>&nbsp;</label><input type="submit" value="{% trans 'Send' %}" />

@@ -23,11 +23,18 @@ def hour_or_date(datetime_instance):
      * If the date is today, only display the hour
      * if the date is before today, display the day+month"""
     today = datetime.date.today()
-    today_midnight = datetime.datetime(today.year, today.month, today.day,
-            tzinfo=LocalTimezone(datetime.datetime.now()))
+    today_midnight = datetime.datetime(today.year, today.month, today.day)
+#            tzinfo=LocalTimezone(datetime.datetime.now()))
     if datetime_instance > today_midnight:
         time_format = '%H:%M'
     else:
         time_format = '%b %d'
 
     return datetime_instance.strftime(time_format)
+
+@register.filter('from')
+def _from(value):
+    address = value[0].split()
+    if len(address) > 1:
+        address = address[:-1]
+    return ' '.join(address)

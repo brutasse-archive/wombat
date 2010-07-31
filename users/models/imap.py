@@ -2,7 +2,7 @@
 
 import os
 import time
-import imaplib
+from imapclient import IMAPClient
 import email.utils
 import email.header
 
@@ -11,11 +11,10 @@ from django.db.models.signals import post_save
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
-import utils
-
 from mail import constants
 
 if settings.IMAPLIB_DEBUG:
+    import imaplib
     imaplib.Debug = 4
 
 # Useful resources regarding the IMAP implementation:
@@ -68,17 +67,18 @@ class IMAP(models.Model):
         Shortcut used by every method that needs an IMAP connection
         instance.
 
-        Returns None or an imaplib.IMAP4_SSL instance (connected).
+        Returns None or an IMAPClient instance (connected).
         """
         if not self.healthy:
             # Spam eggs, bacon and spam
             return
-
-        m = imaplib.IMAP4_SSL(self.server, self.port)
-        (status, response) = m.login(self.username, self.password)
-        if not status == 'OK':
+        ssl = self.port == 993
+        m = IMAPClient(self.server, port=self.port, ssl=ssl)
+        try:
+            m.login(self.username, self.password)
+            return m
+        except IMAPClient.Error:
             return
-        return m
 
     def check_credentials(self):
         """
@@ -90,15 +90,14 @@ class IMAP(models.Model):
         The ``healthy`` attribute should therefore be checked before attemting
         to download anything from the IMAP server.
         """
-        m = imaplib.IMAP4_SSL(self.server, self.port)
+        ssl = self.port == 993
+        m = IMAPClient(self.server, port=self.port, ssl=ssl)
         try:
-            response = m.login(self.username, self.password)
-            if 'OK' in response:
-                self.healthy = True
-        except Exception, e:
-            # There is no special exception for a failed login, bare except.
+            m.login(self.username, self.password)
+            self.healthy = True
+        except IMAPClient.Error:
             self.healthy = False
-        # That was it, closing the connection
+
         m.logout()
         return self.healthy
 
@@ -135,10 +134,7 @@ class IMAP(models.Model):
         pattern = '%'
         if directory:
             pattern = '%s/%%' % directory
-        (status, directories) = m.list("", pattern=pattern)
-
-        if not status == 'OK':
-            return
+        directories = m.list_folders(directory="", pattern=pattern)
 
         parent = None
         if directory:
@@ -146,16 +142,7 @@ class IMAP(models.Model):
 
         dirs = []
         for d in directories:
-            # d should look like:
-            # (\HasChildren) "/" "Archives"
-            # Or
-            # (\HasNoChildren) "/" "Archives/Web"
-            # Or even
-            # (\Noselect \HasChildren) "/" "[Gmail]"
-            if not d:
-                continue
-            details = d.split('"')
-            name = utils.decode(details[-2])
+            name = d[2]
 
             ftype = _guess_folder_type(name.lower())
 
@@ -163,13 +150,13 @@ class IMAP(models.Model):
             dir_, created = Directory.objects.get_or_create(mailbox=self,
                                                             name=name)
             dir_.parent = parent
-            dir_.has_children = 'HasChildren' in details[0]
+            dir_.has_children = '\\HasChildren' in d[0]
             if dir_.has_children:
                 children = self.update_tree(directory=name, connection=m)
                 for child in children:
                     dirs.append(child)
-            dir_.no_select = 'Noselect' in details[0]
-            dir_.no_inferiors = 'NoInferiors' in details[0]
+            dir_.no_select = '\\Noselect' in d[0]
+            dir_.no_inferiors = '\\NoInferiors' in d[0]
             dir_.folder_type = ftype
             dir_.save()
             dirs.append(dir_)
@@ -182,6 +169,8 @@ class IMAP(models.Model):
 
         if update_counts:
             for dir_ in dirs:
+                if dir_.no_select:
+                    continue
                 dir_.count_messages(update=True, connection=m)
 
         if connection is None:

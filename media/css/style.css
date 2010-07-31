@@ -92,16 +92,29 @@ ul#messages {
 }
 ul#messages, ul#messages li:last-child {border-bottom: 1px solid #d1d5d8;}
 
-#messages li {background: #f0f0f0; clear: both; border-top: 1px solid #d1d5d8;}
+#messages li {
+	background: #f0f0f0;
+	clear: both;
+	border-top: 1px solid #d1d5d8;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
 #messages li.new {background: #fff;}
 #messages li:hover {background: #ffd;}
 
 #messages li input[type=checkbox] {float: left;}
-#messages li a {display: block; width: 100%; padding: 3px 0;}
+#messages li a {
+	display: block;
+	width: 100%;
+	padding: 3px 0;
+	position: relative;
+}
 
 .from {color: #666; font-weight: bold; display: inline-block; width: 200px;}
 .new .from {color: #000;}
 .date, .attachment {float: right; padding: 0 2px;}
+.date { position: absolute; right: 2px; bottom: 3px; }
 
 
 /* top & right must be the equal to header's padding. */

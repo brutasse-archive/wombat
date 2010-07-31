@@ -5,8 +5,8 @@
 <div class="message">
   <h2>{{ message.headers.subject|default:_("No subject") }}</h2>
   <ul class="headers">
-    <li>From: {{ message.from }}</li>
-    <li>To: {{ message.to }}</li>
+    <li>From: {{ message.headers.from }}</li>
+    <li>To: {{ message.headers.to }}</li>
     {% if message.headers.cc %}<li>Cc: {{ message.headers.cc }}</li>{% endif %}
     <li>Date: {{ message.headers.date }}</li>
   </ul>

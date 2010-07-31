@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404, redirect
@@ -38,7 +39,10 @@ def directory(request, account_slug, mbox_id, page=1):
     # Filter with user profile to be sure you are looking at your mails !
     # TODO Replace account's id with something more fashion
     dir = request.user.get_profile().get_directory(mbox_id)
-    context = {'directory': dir, 'messages': dir.get_messages(page)}
+    context = {
+        'directory': dir,
+        'threads': dir.get_messages(page)
+    }
     return render(request, 'mail.html', context)
 
 
@@ -54,16 +58,17 @@ def message(request, account_slug, mbox_id, uid):
 
         if action == 'delete':
             directory.delete_message(uid)
-            # TODO report deletion
+            messages.succes(request,
+                            'The conversation has been successfully deleted')
 
         if action == 'move':
             form = MoveForm(directory.mailbox, data=request.POST)
             if form.is_valid():
                 dest = directory.mailbox.directories.get(pk=form.cleaned_data['destination'])
                 directory.move_message(uid, dest.name)
-                # TODO report successful move
+                messages.success(request, 'The conversation has been successfully moved to "%s"' % dest.name)
             else:
-                # TODO report error
+                messages.error(request, 'Unable to move the conversation')
                 pass
 
         return redirect(reverse('directory', args=[account_slug, mbox_id]))

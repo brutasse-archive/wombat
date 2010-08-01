@@ -1,8 +1,6 @@
 from django.shortcuts import redirect
 from django.core.urlresolvers import reverse
 
-from users.models import Account
-
 from functools import wraps # Python >= 2.5 needed
 
 

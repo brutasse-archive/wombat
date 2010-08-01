@@ -52,6 +52,17 @@ h2.title {
 label {display: block; padding: 3px 10px 0 10px; float: left; width: 70px;}
 input[type=password], input[type=text] {width: 140px;}
 
+ul.errorlist {
+	list-style: none;
+	margin: 5px;
+	padding: 5px;
+	color: #d44;
+	background-color: #fdd;
+	border-top: 1px solid #faa;
+	border-bottom: 1px solid #faa;
+}
+.errorlist li { margin: 0; padding: 0; }
+
 /*
  * Panel
  */

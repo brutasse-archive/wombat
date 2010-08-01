@@ -338,8 +338,7 @@ class Directory(models.Model):
         else:
             fetch_range = ','.join(force_uids)
 
-        result = m.select_folder(self.name, readonly=True)
-
+        m.select_folder(self.name, readonly=True)
         response = m.fetch(fetch_range, ['FLAGS', 'RFC822.SIZE', 'ENVELOPE',
                                          'BODYSTRUCTURE', 'INTERNALDATE'])
         m.close_folder()
@@ -414,8 +413,7 @@ class Directory(models.Model):
         if m is None:
             return
 
-        # Select the directory to list
-        response = m.select_folder(self.name, readonly=True)
+        m.select_folder(self.name, readonly=True)
 
         # Fetch the UIDs of the messages in this directory
         uids = m.search(['NOT DELETED'])
@@ -434,9 +432,9 @@ class Directory(models.Model):
         if m is None:
             return
 
-        response = m.select_folder(self.name)
-        response = m.remove_flags([uid], imapclient.SEEN)
-        response = m.close_folder()
+        m.select_folder(self.name)
+        m.remove_flags([uid], imapclient.SEEN)
+        m.close_folder()
         if connection is None:
             m.logout()
 

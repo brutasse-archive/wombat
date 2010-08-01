@@ -6,6 +6,9 @@
 {% block header %}
 <div id="sidebar">
   <div class="form" id="login-form">
+  {% if form.errors %}
+  {{ form.non_field_errors }}
+  {% endif %}
   <form action="{% url login %}" method="post">
     {% csrf_token %}
     <p>
@@ -40,7 +43,4 @@ document.getElementById('id_username').focus()
   <h2 class="title">Register</h2>
   <p>{% trans 'Create your account now and get acces to your emails everywhere, Wombat is totally' %} <a>{% trans 'Free' %}</a>.</p>
 
-{% if form.errors %}
-<p class="errornote">{{ form.non_field_errors.as_text }}</p>
-{% endif %}
 {% endblock %}

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
-from django.shortcuts import redirect
-from django.shortcuts import get_object_or_404
 from django.core.urlresolvers import reverse
 from django.db import transaction
+from django.shortcuts import redirect, get_object_or_404
 
 from shortcuts import render
 from users.forms import AccountForm, ProfileForm, IMAPForm, SMTPForm
-from users.models import Account, SMTP, IMAP
+from users.models import Account
 
 
 def login(request, *a, **kw):
@@ -41,9 +41,8 @@ def settings(request):
         form = ProfileForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
-            # TODO: Display a javascript "Modification saved"
-            # For the moment, redirect to the inbox
-            return redirect(reverse('default_inbox'))
+            messages.success(request, 'Your settings have been updated')
+            #return redirect(reverse('default_inbox'))
         else:
             # TODO: handle correctly the error and translate the message
             err = "Incorrect config..."

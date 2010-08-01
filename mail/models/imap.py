@@ -1,22 +1,234 @@
 # -*- coding: utf-8 -*-
+# Useful resources regarding the IMAP implementation:
+# ===================================================
+#
+# * Best practices: http://www.imapwiki.org/ClientImplementation
+# * IMAP4rev1 RFC: http://tools.ietf.org/html/rfc3501
 
-import datetime
+import email.header
 import email.parser
 import imapclient
 import re
 
+from django.conf import settings
 from django.db import models
+from django.utils.html import strip_tags
 from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
-from django.utils.html import strip_tags
-
-from users.models import IMAP
-from mail import constants
-
 
 FLAG_RE = re.compile(r'^(\d+) .* FLAGS \(([^\)]*)\)')
 BODY_RE = re.compile(r'BODYSTRUCTURE \((.+)\)')
 HEADER_RE = re.compile(r'^([a-zA-Z0-9_-]+):(.*)$')
+
+# Folder types
+NORMAL = 100
+INBOX = 10
+OUTBOX = 20
+DRAFTS = 30
+QUEUE = 40
+TRASH = 50
+SPAM = 60
+OTHER = 70  # For proprietary stuff like Gmail's Starred/All mail
+
+FOLDER_TYPES = (
+    (NORMAL, _('Normal')),
+    (INBOX, _('Inbox')),
+    (OUTBOX, _('Outbox')),
+    (DRAFTS, _('Drafts')),
+    (QUEUE, _('Queue')),
+    (TRASH, _('Trash')),
+    (SPAM, _('Spam')),
+    (OTHER, _('Other')),
+)
+
+if settings.IMAP_DEBUG:
+    import imaplib
+    imaplib.Debug = 4
+
+
+class IMAP(models.Model):
+    """
+    A wombat user can have several IMAP configurations. The information about
+    those accounts is stored here, including login credentials.
+    """
+    server = models.CharField(_('Server'), max_length=255)
+
+    # Port: 585 for IMAP4-SSL, 993 for IMAPS (Gmail default)
+    port = models.PositiveIntegerField(_('Port'), default=143,
+                                       help_text=_("(993 with SSL)"))
+    username = models.CharField(_('Username'), max_length=255)
+
+    # TODO: have a look at http://docs.python.org/library/hmac.html
+    # We have to find a way to store passwords in an encrypted way, and having
+    # the database stolen should not be compromising
+    password = models.CharField(_('Password'), max_length=255)
+
+    # A way to tell the user that his account is well configured or
+    # something is wrong.
+    healthy = models.BooleanField(_('Healthy account'), default=False)
+
+    def __unicode__(self):
+        return u'%s imap' % self.account
+
+    class Meta:
+        verbose_name = _('IMAP config')
+        verbose_name_plural = _('IMAP configs')
+        app_label = 'mail'
+
+    def get_connection(self):
+        """
+        Shortcut used by every method that needs an IMAP connection
+        instance.
+
+        Returns None or an IMAPClient instance (connected).
+        """
+        if not self.healthy:
+            # Spam eggs, bacon and spam
+            return
+        ssl = self.port == 993
+        m = imapclient.IMAPClient(self.server, port=self.port, ssl=ssl)
+        try:
+            m.login(self.username, self.password)
+            return m
+        except imapclient.IMAPClient.Error:
+            return
+
+    def check_credentials(self):
+        """
+        Tries to authenticate to the configured IMAP server.
+
+        This method alters the ``healthy`` attribute, settings it to True if
+        the authentication is successful.
+
+        The ``healthy`` attribute should therefore be checked before attemting
+        to download anything from the IMAP server.
+        """
+        ssl = self.port == 993
+        m = imapclient.IMAPClient(self.server, port=self.port, ssl=ssl)
+        try:
+            m.login(self.username, self.password)
+            self.healthy = True
+        except imapclient.IMAPClient.Error:
+            self.healthy = False
+
+        m.logout()
+        return self.healthy
+
+    def check_mail(self, connection=None):
+        """
+        Refresh all directories for this connection.
+        """
+        if not self.healthy:
+            return
+
+        if connection is None:
+            m = self.get_connection()
+        else:
+            m = connection
+
+        for directory in self.directories.all():
+            directory.count_messages(connection=m)
+        m.logout()
+
+    def update_tree(self, directory="", update_counts=True, connection=None):
+        """
+        Updates directories statuses cached in the database.
+
+        Returns the number of directories or None if failed.
+        """
+        if not self.healthy:
+            return
+
+        if connection is None:
+            m = self.get_connection()
+        else:
+            m = connection
+
+        pattern = '%'
+        if directory:
+            pattern = '%s/%%' % directory
+        directories = m.list_folders(directory="", pattern=pattern)
+
+        parent = None
+        if directory:
+            parent = self.directories.get(name=directory)
+
+        dirs = []
+        for d in directories:
+            name = d[2]
+
+            ftype = _guess_folder_type(name.lower())
+
+            from mail.models import Directory  # XXX
+            dir_, created = Directory.objects.get_or_create(mailbox=self,
+                                                            name=name)
+            dir_.parent = parent
+            dir_.has_children = '\\HasChildren' in d[0]
+            if dir_.has_children:
+                children = self.update_tree(directory=name, connection=m)
+                for child in children:
+                    dirs.append(child)
+            dir_.no_select = '\\Noselect' in d[0]
+            dir_.no_inferiors = '\\NoInferiors' in d[0]
+            dir_.folder_type = ftype
+            dir_.save()
+            dirs.append(dir_)
+
+        if not directory:
+            # Deleting 'old' directories. If things have changed on
+            # the server via another client for instance
+            uptodate_dirs = [d.name for d in dirs]
+            self.directories.exclude(name__in=uptodate_dirs).delete()
+
+        if update_counts:
+            for dir_ in dirs:
+                if dir_.no_select:
+                    continue
+                dir_.count_messages(update=True, connection=m)
+
+        if connection is None:
+            m.logout()
+
+        if directory:
+            return dirs
+        return len(dirs)
+
+
+def update_tree_on_save(sender, instance, created, **kwargs):
+    """
+    When an account is saved, the cached directories are automatically updated.
+    """
+    if instance.healthy:
+        instance.update_tree()
+models.signals.post_save.connect(update_tree_on_save, sender=IMAP)
+
+
+def _guess_folder_type(name):
+    """
+    Guesses the type of the folder given its name. Returns a constant to put
+    in the ``folder_type`` attribute of the folder.
+    """
+    if name in ('inbox',):
+        return INBOX
+
+    if name in ('drafts', '[gmail]/drafts'):
+        return DRAFTS
+
+    if name in ('outbox', 'sent', '[gmail]/sent mail'):
+        return OUTBOX
+
+    if name in ('queue'):
+        return QUEUE
+
+    if name in ('trash', '[gmail]/trash'):
+        return TRASH
+
+    if name in ('spam', 'junk', '[gmail]/spam'):
+        return SPAM
+
+    if name.startswith('[gmail]'):
+        return OTHER
+    return NORMAL
 
 
 class Directory(models.Model):
@@ -41,17 +253,17 @@ class Directory(models.Model):
 
     # Folders types: Inbox, Trash, Spam...
     folder_type = models.IntegerField(_('Folder type'),
-                                      choices=constants.FOLDER_TYPES,
-                                      default=constants.NORMAL, db_index=True)
+                                      choices=FOLDER_TYPES,
+                                      default=NORMAL, db_index=True)
 
     class Meta:
         ordering = ('name',)
         verbose_name_plural = _('Directories')
-        app_label = 'users'
+        app_label = 'mail'
 
     def __unicode__(self):
-        if not self.folder_type == constants.NORMAL:
-            if self.folder_type == constants.OTHER:
+        if not self.folder_type == NORMAL:
+            if self.folder_type == OTHER:
                 return self.name.replace('[Gmail]/', '')  # XXX GMail-only Fix
             return self.get_folder_type_display()
 
@@ -249,7 +461,7 @@ class Directory(models.Model):
             m.logout()
 
     def delete_message(self, uid, connection=None):
-        trash = self.mailbox.directories.filter(folder_type=constants.TRASH).get()
+        trash = self.mailbox.directories.filter(folder_type=TRASH).get()
         return self.move_message(uid, trash.name, connection=connection)
 
 
@@ -258,6 +470,10 @@ class Message(models.Model):
     dir = models.ForeignKey(Directory)
     read = models.BooleanField()
 
+    class Meta:
+        app_label = 'mail'
+
+    # FIXME models.Model already defines __init__ -- should be done differently
     def __init__(self, uid=None, msg_dict=None):
         self.uid = int(uid)
         self.headers = {}

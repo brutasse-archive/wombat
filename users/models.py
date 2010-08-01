@@ -8,12 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
 
-from users.models.imap import IMAP
-from mail.models import Directory
-from mail import constants
-
-# It's a package so we have to manually add the models that aren't here
-__all__ = ['IMAP',]
+from mail.models import Directory, IMAP, SMTP, NORMAL
 
 
 class Profile(models.Model):
@@ -56,30 +51,6 @@ def user_post_save(sender, instance, **kwargs):
 models.signals.post_save.connect(user_post_save, sender=User)
 
 
-class SMTP(models.Model):
-    """
-    All the needed information to connect to a SMTP server and send emails.
-    """
-    server = models.CharField(_('Server'), max_length=255)
-    port = models.PositiveIntegerField(_('Port'), default=25,
-                                       help_text=_("(465 with SSL)"))
-    username = models.CharField(_('Username'), max_length=75)
-    password = models.CharField(_('Password'), max_length=75)
-
-    # Are we actually able to connect to this server?
-    # There should be some check, try to connect to the server when the
-    # configuration is altered.
-    healthy = models.BooleanField(_('Healthy'), default=False)
-
-    def __unicode__(self):
-        return u'%s smtp' % self.account
-
-    class Meta:
-        verbose_name = _('SMTP config')
-        verbose_name_plural = _('SMTP configs')
-        app_label = 'users'
-
-
 class Account(models.Model):
     """
     A wombat user can have several accounts, whose information is gathered here
@@ -107,14 +78,14 @@ class Account(models.Model):
     def common_directories(self):
         """Returns all the common directories: inbox, outbox, etc."""
         if self.imap:
-            dirs = self.imap.directories.exclude(folder_type=constants.NORMAL).exclude(name__iexact='[gmail]')
+            dirs = self.imap.directories.exclude(folder_type=NORMAL).exclude(name__iexact='[gmail]')
             return dirs.order_by('folder_type')
         return []
 
     def custom_directories(self):
         """ Return the list of Directories. """
         if self.imap:
-            return self.imap.directories.filter(folder_type=constants.NORMAL, parent__isnull=True)
+            return self.imap.directories.filter(folder_type=NORMAL, parent__isnull=True)
         return []
 
 

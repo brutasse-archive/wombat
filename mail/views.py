@@ -8,9 +8,8 @@ from django.shortcuts import get_object_or_404, redirect
 from shortcuts import render
 from decorators import account_required
 
-from mail import constants
+from mail import models
 from mail.forms import MailForm, ActionForm, MoveForm
-from users.models import Account, IMAP
 
 
 @login_required
@@ -21,7 +20,7 @@ def inbox(request, account_slug=None):
         account = accounts[0]
     else:
         account = accounts.get(slug=account_slug)
-    inbox = account.imap.directories.get(folder_type=constants.INBOX)
+    inbox = account.imap.directories.get(folder_type=models.INBOX)
     return directory(request, account.slug, inbox.id)
 
 
@@ -86,7 +85,7 @@ def message(request, account_slug, mbox_id, uid):
 @login_required
 @account_required
 def check_mail(request, account_slug):
-    imap = get_object_or_404(IMAP, account__slug=account_slug,
+    imap = get_object_or_404(models.IMAP, account__slug=account_slug,
                              account__profile=request.user.get_profile())
     imap.check_mail()
 

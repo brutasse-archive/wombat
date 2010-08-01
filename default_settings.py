@@ -21,7 +21,6 @@ ADMINS = (
 )
 MANAGERS = ADMINS
 
-
 DATABASES = {
     'default': { # Development SQLite
         'ENGINE': 'django.db.backends.sqlite3',
@@ -29,6 +28,7 @@ DATABASES = {
     }
 }
 
+SITE_ID = 1
 
 TIME_ZONE = 'Europe/Paris'
 LANGUAGE_CODE = 'en-us'
@@ -37,8 +37,8 @@ USE_I18N = True
 USE_L10N = True
 
 MEDIA_ROOT = os.path.join(HERE, 'media')
-MEDIA_URL = '/media/'
-ADMIN_MEDIA_PREFIX = '/admin_media/'
+MEDIA_URL = '/static/'
+ADMIN_MEDIA_PREFIX = '/media/'
 
 SECRET_KEY = '2q(ac(%ae6ni8(v0+_&@9zkl5^a_76ozmg59kw%xst9c(c%o61'
 
@@ -62,6 +62,7 @@ TEMPLATE_DIRS = (
 )
 
 INSTALLED_APPS = (
+    'django.contrib.sites',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -89,6 +90,25 @@ _ = lambda s: s
 LANGUAGES = (
   ('en', _('English')),
 )
+
+# Test settings
+TEST_RUNNER = 'coverage_runner.CoverageRunner'
+
+COVERAGE_MODULES = [
+    'users.admin',
+    'users.forms',
+    'users.models',
+    'users.views',
+
+    'mail.admin',
+    'mail.backends',
+    'mail.forms',
+    'mail.models',
+    'mail.models.imap',
+    'mail.models.smtp',
+    'mail.templatetags.mail_tags',
+    'mail.views',
+]
 
 try:
     from local_settings import *

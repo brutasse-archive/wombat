@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from django.conf import settings
 from django.conf.urls.defaults import *
 from django.contrib import admin
+
 admin.autodiscover()
 
 urlpatterns = patterns('',
@@ -18,9 +20,8 @@ urlpatterns = patterns('',
     url(r'^mail/', include('mail.urls')),
 )
 
-from django.conf import settings
 if settings.DEBUG:
     urlpatterns += patterns('django.views.static',
-            (r'^media/(?P<path>.*)', 'serve',
+            (r'^static/(?P<path>.*)', 'serve',
                 {'document_root': settings.MEDIA_ROOT}),
     )

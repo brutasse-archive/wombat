@@ -47,8 +47,10 @@ class MoveForm(ActionForm):
 
     def _get_dirs(self, account, exclude):
         yield ('', _('Move to...'))
-        for directory in account.directories.filter(no_select=False,
-                folder_type__in=(NORMAL, INBOX)).order_by('name'):
+        types = (NORMAL, INBOX)
+        mailboxes = account.directories.filter(no_select=False,
+                                               folder_type__in=types)
+        for directory in mailboxes.order_by('folder_type', 'name'):
             if exclude is not None and directory == exclude:
                 continue
             yield ('%s' % directory.id, u'%s' % directory.name)

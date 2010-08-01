@@ -168,8 +168,8 @@ class IMAP(models.Model):
                 children = self.update_tree(directory=name, connection=m)
                 for child in children:
                     dirs.append(child)
-            dir_.no_select = '\\Noselect' in d[0]
-            dir_.no_inferiors = '\\NoInferiors' in d[0]
+            if r'\Noselect' in d[0] or r'\NoInferiors' in d[0]:
+                dir_.no_select = True
             dir_.folder_type = ftype
             dir_.save()
             dirs.append(dir_)
@@ -245,7 +245,6 @@ class Directory(models.Model):
     # IMAP attributes
     has_children = models.BooleanField(_('Has children'), default=False)
     no_select = models.BooleanField(_('Cannot store messages'), default=False)
-    no_inferiors = models.BooleanField(_('Cannot store folders'), default=False)
 
     # Caching the unread & total counts directly in the DB
     unread = models.PositiveIntegerField(_('Unread messages'), default=0)
@@ -387,9 +386,8 @@ class Directory(models.Model):
 
         statuses = m.folder_status(self.name)
         if connection is None:
-            m.logout()  # KTHXBYE
+            m.logout()
 
-        print self.name
         values = {
             'total': statuses['MESSAGES'],
             'uidnext': statuses['UIDNEXT'],

@@ -52,6 +52,10 @@ h2.title {
 label {display: block; padding: 3px 10px 0 10px; float: left; width: 70px;}
 input[type=password], input[type=text] {width: 140px;}
 
+/**
+ * Messages and error reporting
+ */
+/* Form errors */
 ul.errorlist {
 	list-style: none;
 	margin: 5px;
@@ -62,6 +66,15 @@ ul.errorlist {
 	border-bottom: 1px solid #faa;
 }
 .errorlist li { margin: 0; padding: 0; }
+/* contrib.messages */
+#messages .msg {
+	padding: 5px 25px;
+	border-bottom: 1px solid #959596;
+	text-align: center;
+}
+#messages .success { background-color: #ffc; }
+#messages .info { background-color: #ffc; }
+#messages .error { background-color: #fdd; }
 
 /*
  * Panel

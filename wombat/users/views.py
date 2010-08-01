@@ -42,16 +42,16 @@ def settings(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Your settings have been updated')
-            #return redirect(reverse('default_inbox'))
+            return redirect(reverse('default_inbox'))
         else:
             # TODO: handle correctly the error and translate the message
             err = "Incorrect config..."
     else:
         err = ''
         form = ProfileForm(instance=profile)
-    return render(request, 'settings.html', {
-        'user': request.user, 'form': form, 'err_msg': err,
-    })
+
+    context = {'user': request.user, 'form': form,}
+    return render(request, 'settings.html', context)
 
 
 @login_required

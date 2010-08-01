@@ -22,14 +22,14 @@
     <a href="{% url logout %}">Log out</a>
   </span>
 </div> <!-- #header -->
-{% endblock %}
-
-{% block content %}
 {% if messages %}<div id="messages">{% for message in messages %}
 	<div class="msg {{ message.tags }}">
 		{{ message }}
 	</div>{% endfor %}
 </div>{% endif %}
+{% endblock %}
+
+{% block content %}
 
 <div class="panel">
 {% block panel %}

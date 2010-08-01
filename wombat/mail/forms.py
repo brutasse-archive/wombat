@@ -3,7 +3,7 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
-from mail import constants
+from mail.models import NORMAL, INBOX
 
 
 class MailForm(forms.Form):
@@ -48,7 +48,7 @@ class MoveForm(ActionForm):
     def _get_dirs(self, account, exclude):
         yield ('', _('Move to...'))
         for directory in account.directories.filter(no_select=False,
-                folder_type=constants.NORMAL).order_by('name'):
+                folder_type__in=(NORMAL, INBOX)).order_by('name'):
             if exclude is not None and directory == exclude:
                 continue
             yield ('%s' % directory.id, u'%s' % directory.name)

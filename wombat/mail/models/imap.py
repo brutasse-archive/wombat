@@ -159,9 +159,8 @@ class IMAP(models.Model):
 
             ftype = _guess_folder_type(name.lower())
 
-            from mail.models import Directory  # XXX
-            dir_, created = Directory.objects.get_or_create(mailbox=self,
-                                                            name=name)
+            dir_, created = Mailbox.objects.get_or_create(imap=self,
+                                                          name=name)
             dir_.parent = parent
             dir_.has_children = '\\HasChildren' in d[0]
             if dir_.has_children:
@@ -231,13 +230,13 @@ def _guess_folder_type(name):
     return NORMAL
 
 
-class Directory(models.Model):
+class Mailbox(models.Model):
     """
     Represents a directory in the IMAP tree. Its attributes are cached
     for performance/latency reasons and should be easy to update on
     demand or on a regular basis.
     """
-    mailbox = models.ForeignKey(IMAP, verbose_name=_('Mailbox'),
+    imap = models.ForeignKey(IMAP, verbose_name=_('Mailbox'),
                                 related_name='directories')
     name = models.CharField(_('Name'), max_length=255)
     parent = models.ForeignKey('self', related_name='children', null=True)
@@ -271,7 +270,7 @@ class Directory(models.Model):
         return self.name
 
     def get_message(self, uid):
-        m = self.mailbox.get_connection()
+        m = self.imap.get_connection()
         msg = Message(uid)
         msg.fetch(m, self.name)
         m.close_folder()
@@ -319,7 +318,7 @@ class Directory(models.Model):
         }
         """
         if connection is None:
-            m = self.mailbox.get_connection()
+            m = self.imap.get_connection()
         else:
             m = connection
 
@@ -376,7 +375,7 @@ class Directory(models.Model):
         every <whatever> minutes when the user is online.
         """
         if connection is None:
-            m = self.mailbox.get_connection()
+            m = self.imap.get_connection()
         else:
             m = connection
 
@@ -406,7 +405,7 @@ class Directory(models.Model):
 
         Returns a list of the messages' UIDs"""
         if connection is None:
-            m = self.mailbox.get_connection()
+            m = self.imap.get_connection()
         else:
             m = connection
 
@@ -425,7 +424,7 @@ class Directory(models.Model):
 
     def unread_message(self, uid, connection=None):
         if connection is None:
-            m = self.mailbox.get_connection()
+            m = self.imap.get_connection()
         else:
             m = connection
 
@@ -440,7 +439,7 @@ class Directory(models.Model):
 
     def move_message(self, uid, dest, connection=None):
         if connection is None:
-            m = self.mailbox.get_connection()
+            m = self.imap.get_connection()
         else:
             m = connection
 
@@ -457,13 +456,13 @@ class Directory(models.Model):
             m.logout()
 
     def delete_message(self, uid, connection=None):
-        trash = self.mailbox.directories.filter(folder_type=TRASH).get()
+        trash = self.imap.directories.filter(folder_type=TRASH).get()
         return self.move_message(uid, trash.name, connection=connection)
 
 
 class Message(models.Model):
     uid = models.PositiveIntegerField()
-    dir = models.ForeignKey(Directory)
+    mailbox = models.ForeignKey(Mailbox)
     read = models.BooleanField()
 
     class Meta:

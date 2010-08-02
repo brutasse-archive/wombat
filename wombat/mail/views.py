@@ -37,10 +37,10 @@ def compose(request):
 def directory(request, account_slug, mbox_id, page=1):
     # Filter with user profile to be sure you are looking at your mails !
     # TODO Replace account's id with something more fashion
-    dir = request.user.get_profile().get_directory(mbox_id)
+    directory = request.user.get_profile().get_directory(mbox_id)
     context = {
-        'directory': dir,
-        'threads': dir.get_messages(page)
+        'directory': directory,
+        'threads': directory.get_messages(page)
     }
     return render(request, 'mail.html', context)
 
@@ -61,9 +61,9 @@ def message(request, account_slug, mbox_id, uid):
                             'The conversation has been successfully deleted')
 
         if action == 'move':
-            form = MoveForm(directory.mailbox, data=request.POST)
+            form = MoveForm(directory.imap, data=request.POST)
             if form.is_valid():
-                dest = directory.mailbox.directories.get(pk=form.cleaned_data['destination'])
+                dest = directory.imap.directories.get(pk=form.cleaned_data['destination'])
                 directory.move_message(uid, dest.name)
                 messages.success(request, 'The conversation has been successfully moved to "%s"' % dest.name)
             else:

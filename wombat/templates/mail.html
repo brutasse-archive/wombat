@@ -39,7 +39,7 @@
     {% for m in threads %}
     <li{% if not m.read %} class="new"{% endif %}>
       <input type="checkbox" name="m_{{ m.uid }}" />
-      <a href="{% url message directory.mailbox.account.slug directory.id m.uid %}">
+      <a href="{% url message directory.imap.account.slug directory.id m.uid %}">
           {% if m.headers.from %}<span class="from">{{ m.headers.from|from }}</span>{% endif %}
         {{ m.headers.subject|default:"No subject" }}
         <span class="date">{{ m.date|hour_or_date }}</span>

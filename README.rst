@@ -3,6 +3,12 @@ Wombat
 
 Wombat is a django-powered web-based email client.
 
+Status
+------
+
+Wombat is under very early development, backwards-incompatible changes can be
+made at any time and it won't change anytime soon.
+
 Download
 --------
 

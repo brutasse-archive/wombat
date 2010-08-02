@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
 
-from mail.models import Directory, IMAP, SMTP, NORMAL
+from mail.models import Mailbox, IMAP, SMTP, NORMAL
 
 
 class Profile(models.Model):
@@ -33,9 +33,9 @@ class Profile(models.Model):
 
     def get_directory(self, id):
         """ Return user's IMAP directory matching the id """
-        dir = get_object_or_404(Directory, id=id)
-        if dir.mailbox.account in self.accounts.all():
-            return dir
+        mailbox = get_object_or_404(Mailbox, id=id)
+        if mailbox.imap.account in self.accounts.all():
+            return mailbox
         else:
             raise Http404(_("Directory not found"))
 

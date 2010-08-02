@@ -1,10 +1,10 @@
 from django.contrib import admin
 
-from users.models import IMAP, Directory, SMTP, Account, Profile
+from users.models import IMAP, Mailbox, SMTP, Account, Profile
 from django.contrib.auth.models import User
 
 class DirAdmin(admin.ModelAdmin):
-    list_display = ('name', 'mailbox', 'has_children', 'no_select',
+    list_display = ('name', 'imap', 'has_children', 'no_select',
                     'unread', 'total', 'parent')
 
 
@@ -20,6 +20,6 @@ class UserWithProfileAdmin(admin.ModelAdmin):
 admin.site.register(IMAP)
 admin.site.register(SMTP)
 admin.site.register(Account)
-admin.site.register(Directory, DirAdmin)
+admin.site.register(Mailbox, DirAdmin)
 admin.site.unregister(User)
 admin.site.register(User, UserWithProfileAdmin)

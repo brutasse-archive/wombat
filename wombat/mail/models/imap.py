@@ -8,7 +8,6 @@
 import email.header
 import email.parser
 import imapclient
-import re
 
 from django.conf import settings
 from django.db import models
@@ -16,9 +15,7 @@ from django.utils.html import strip_tags
 from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
 
-FLAG_RE = re.compile(r'^(\d+) .* FLAGS \(([^\)]*)\)')
-BODY_RE = re.compile(r'BODYSTRUCTURE \((.+)\)')
-HEADER_RE = re.compile(r'^([a-zA-Z0-9_-]+):(.*)$')
+from mail.fields import UUIDField, SeparatedValuesField
 
 # Folder types
 NORMAL = 100
@@ -237,7 +234,7 @@ class Mailbox(models.Model):
     demand or on a regular basis.
     """
     imap = models.ForeignKey(IMAP, verbose_name=_('Mailbox'),
-                                related_name='directories')
+                             related_name='directories')  # XXX rename
     name = models.CharField(_('Name'), max_length=255)
     parent = models.ForeignKey('self', related_name='children', null=True)
 
@@ -255,8 +252,8 @@ class Mailbox(models.Model):
                                       default=NORMAL, db_index=True)
 
     class Meta:
-        ordering = ('name',)
-        verbose_name_plural = _('Directories')
+        ordering = ('imap', 'name')
+        verbose_name_plural = _('Mailboxes')
         app_label = 'mail'
 
     def __unicode__(self):
@@ -271,7 +268,7 @@ class Mailbox(models.Model):
 
     def get_message(self, uid):
         m = self.imap.get_connection()
-        msg = Message(uid)
+        msg = Message(uid=uid)
         msg.fetch(m, self.name)
         m.close_folder()
         m.logout()
@@ -304,18 +301,7 @@ class Mailbox(models.Model):
         status of those two messages. It is useless to set ``offset`` and
         ``number_of_messages`` if you specify ``force_uids``.
 
-        This method returns a tuple containing dictionnaries, each of them
-        representing an email, with the following attributes:
-        {
-            'uid': the uid of the message in the directory,
-            'from': the sender,
-            'to': the recipients list,
-            'subject': the subject of the message. This may be an empty string,
-            'read': whether the message has been flagged as Seen or not,
-            'message-id': the header identifying this message,
-            (if applicable) 'in-reply-to': the message-id of the message this
-            one replies to
-        }
+        This method returns a list of ``Message`` instances.
         """
         if connection is None:
             m = self.imap.get_connection()
@@ -347,7 +333,7 @@ class Mailbox(models.Model):
 
         messages = []
         for uid, msg in response.items():
-            message = Message(uid=uid, msg_dict=msg)
+            message = Message(uid=uid, mailbox=self, msg_dict=msg, update=False)
             messages.append(message)
 
         messages.sort(key=lambda msg: msg.date, reverse=True)
@@ -459,59 +445,183 @@ class Mailbox(models.Model):
         trash = self.imap.directories.filter(folder_type=TRASH).get()
         return self.move_message(uid, trash.name, connection=connection)
 
+    def update_messages(self, connection=None):
+        if connection is None:
+            m = self.imap.get_connection()
+        else:
+            m = connection
 
-class Message(models.Model):
-    uid = models.PositiveIntegerField()
-    mailbox = models.ForeignKey(Mailbox)
-    read = models.BooleanField()
+        db_uids = self.messages.values_list('uid', flat=True)
+        imap_uids = self.get_uids(connection=m)
+
+        remove_from_db = filter(lambda x: x not in imap_uids, db_uids)
+        self.messages.filter(uid__in=remove_from_db).delete()
+
+        fetch_from_imap = map(str, filter(lambda x: x not in db_uids, imap_uids))
+        if fetch_from_imap:
+            print "Updating %s messages" % len(imap_uids)
+            messages = self.list_messages(force_uids=fetch_from_imap,
+                                          connection=m)
+        else:
+            messages = ()
+
+        if connection is None:
+            m.logout()
+
+        account_messages = Message.objects.filter(mailbox__imap=self.imap)
+        for message in messages:
+            if message.message_id is None and message.in_reply_to is None:
+                message.assign_new_thread()
+                continue
+
+            qs = None
+            if message.message_id is not None:
+                qs = models.Q(in_reply_to=message.message_id)
+            if message.in_reply_to is not None:
+                if qs:
+                    qs = qs | models.Q(message_id=message.in_reply_to)
+                else:
+                    qs = models.Q(message_id=message.in_reply_to)
+                qs = qs | models.Q(in_reply_to=message.in_reply_to)
+
+            thread_messages = account_messages.filter(qs)
+            if not thread_messages:
+                message.assign_new_thread()
+                continue
+
+            if len(thread_messages) > 1:  # Merge threads
+                # FIXME delete empty threads
+                thread_messages.update(thread=thread_messages[0].thread)
+            message.thread = thread_messages[0].thread
+            message.save()
+
+
+class Thread(models.Model):
+    """
+    Every message is tied to a thread. Putting it in the DB have several
+    advantages:
+        * Having reliable, persistent URLs for threads is trivial
+        * It makes it easy to regroup messages in the same thread even if
+          they're not in the same mailbox.
+    Threads are "flat", there is no tree structure. Sort of like gmail.
+    """
+    uuid = UUIDField(primary_key=True, editable=False)
+
+    def __unicode__(self):
+        return u'%s' % self.uuid
 
     class Meta:
         app_label = 'mail'
 
-    # FIXME models.Model already defines __init__ -- should be done differently
-    def __init__(self, uid=None, msg_dict=None):
-        self.uid = int(uid)
-        self.headers = {}
-        if msg_dict is not None:
-            self.parse_dict(msg_dict)
-        self.body = u''
-        self.html_body = u''
-        self.attachment = None
+    def get_message_count(self):
+        return self.messages.count()
 
-    def parse_dict(self, msg_dict):
+
+class Message(models.Model):
+    # Fields fetched from message lists
+    uid = models.PositiveIntegerField()
+    message_id = models.CharField(_('Message ID'), max_length=1023,
+                                  db_index=True, null=True)
+    in_reply_to = models.CharField(_('In reply to'), max_length=1023,
+                                  db_index=True, null=True)
+    date = models.DateTimeField(_('Date'))
+    subject = models.CharField(_('Subject'), max_length=1023)
+    fro = models.TextField(_('From'))  # I wish I could call it 'from'
+    to = SeparatedValuesField(_('To'), null=True)
+    sender = models.TextField(_('Sender'))
+    reply_to = models.TextField(_('Reply to'), null=True)
+    cc = SeparatedValuesField(_('Cc'), null=True)
+    bcc = SeparatedValuesField(_('Bcc'), null=True)
+    size = models.PositiveIntegerField(_('Size'))
+    read = models.BooleanField(_('Read'), default=False)
+
+    # Fields fetched for each message individually
+    fetched = models.BooleanField(_('Fetched'), default=False)
+    body = models.TextField(_('Body'), null=True)
+    html_body = models.TextField(_('HTML Body'), null=True)
+
+    mailbox = models.ForeignKey(Mailbox, verbose_name=_('Mailbox'),
+                               related_name='messages')
+    thread = models.ForeignKey(Thread, verbose_name=_('Thread'),
+                               related_name='messages')
+
+    def __unicode__(self):
+        return u'%s' % self.subject
+
+    class Meta:
+        app_label = 'mail'
+
+    def __init__(self, *args, **kwargs):
+        """
+        Creates a ``Message`` instance.
+
+        ``msg_dict`` can be passed to populate lots of attributes.
+        Set ``update`` to False if you don't want the model
+        to be saved.
+        """
+        msg_dict = kwargs.pop('msg_dict', None)
+        update = kwargs.pop('update', True)
+        super(Message, self).__init__(*args, **kwargs)
+
+        if msg_dict is not None:
+            self.parse_dict(msg_dict, update=update)
+        self.attachment = None # XXX see BODYSTRUCTURE
+
+    def parse_dict(self, msg_dict, update=True):
+        """
+        Parsed the response from a FETCH command and populates as
+        much headers as possible
+
+        if ``update`` is set to False, the model won't be saved
+        once parse.
+        """
+        print msg_dict
         self.read = imapclient.SEEN in msg_dict['FLAGS']
         self.size = msg_dict['RFC822.SIZE']
         self.date = msg_dict['INTERNALDATE']
-        self.headers = {
-            'date': msg_dict['INTERNALDATE'],
-            'subject': self._clean_header(msg_dict['ENVELOPE'][1]),
+        self.subject = self._clean_header(msg_dict['ENVELOPE'][1])
+        self.in_reply_to = msg_dict['ENVELOPE'][8]
+        self.message_id = msg_dict['ENVELOPE'][9]
+
+        addresses = {
             'from': msg_dict['ENVELOPE'][2],
             'sender': msg_dict['ENVELOPE'][3],
             'reply-to': msg_dict['ENVELOPE'][4],
-            'cc': msg_dict['ENVELOPE'][5],
-            'bcc': msg_dict['ENVELOPE'][6],
-            'in-reply-to': msg_dict['ENVELOPE'][7],
-            'message-id': msg_dict['ENVELOPE'][8],
+            'to': msg_dict['ENVELOPE'][5],
+            'cc': msg_dict['ENVELOPE'][6],
+            'bcc': msg_dict['ENVELOPE'][7],
         }
 
-        for key in ('from', 'sender', 'reply-to', 'cc', 'bcc'):
-            if self.headers[key] is not None:
-                self.headers[key] = self.address_struct_to_addresses(self.headers[key])
+        for key, value in addresses.items():
+            if value is not None:
+                addresses[key] = self.address_struct_to_addresses(value)
 
-    def fetch(self, m, dirname):
+        self.to = addresses['to']
+        self.fro = addresses['from']
+        self.sender = addresses['sender']
+        self.reply_to = addresses['reply-to']
+        self.cc = addresses['cc']
+        self.bcc = addresses['bcc']
+        if update:
+            self.save()
+
+    def fetch(self, m):
         """
-        Fetches message content from the server. If the message is new, it
-        will be implicitly marked as read.
+        Fetches message content from the server.
+        ``m`` is an imapclient.IMAPClient instance, logged in.
         """
-        response = m.select_folder(dirname)
+        m.select_folder(self.mailbox.name, readonly=True)
         response = m.fetch([self.uid], ['RFC822', 'FLAGS'])
+        m.close_folder()
+        self.read = imapclient.SEEN in response[self.uid]['FLAGS']
         self.parse(response[self.uid]['RFC822'])
 
-    def parse(self, raw_email):
+    def parse(self, raw_email, update=True):
         """
         Fetches the content of the message and populates the available headers
         """
-
+        body = u''
+        html_body = u''
         msg = email.parser.Parser().parsestr(raw_email)
 
         for part in msg.walk():
@@ -524,13 +634,23 @@ class Message(models.Model):
                 payload = payload.decode(charset)
 
             if part.get_content_type() == 'text/plain':
-                self.body += payload
+                body += payload
 
             if part.get_content_type() == 'text/html':
-                self.html_body += payload
+                html_body += payload
 
-        if not self.body:
-            self.body = unescape_entities(strip_tags(self.html_body))
+        if not body:
+            body = unescape_entities(strip_tags(html_body))
+        self.body = body
+        self.html_body = html_body
+        if update:
+            self.save()
+
+    def assign_new_thread(self):
+        thread = Thread()
+        thread.save()
+        self.thread = thread
+        self.save()
 
     def address_struct_to_addresses(self, address_struct):
         addresses = []

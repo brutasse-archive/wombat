@@ -1,0 +1,5 @@
+Django==1.2.1
+gunicorn==0.9.1
+IMAPClient==0.6
+mongoengine==0.3
+pymongo==1.7

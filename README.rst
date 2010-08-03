@@ -14,6 +14,10 @@ Download
 
 ::
     git clone git://gitorious.org/wombat/wombat.git
+    cd wombat
+    mkvirtualenv wombat
+    easy_install pip
+    pip install -r requirements.txt
 
 Development
 -----------

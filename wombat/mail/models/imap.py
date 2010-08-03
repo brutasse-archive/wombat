@@ -579,7 +579,7 @@ class Message(models.Model):
         self.read = imapclient.SEEN in msg_dict['FLAGS']
         self.size = msg_dict['RFC822.SIZE']
         self.date = msg_dict['INTERNALDATE']
-        self.subject = self._clean_header(msg_dict['ENVELOPE'][1])
+        self.subject = clean_header(msg_dict['ENVELOPE'][1])
         self.in_reply_to = msg_dict['ENVELOPE'][8]
         self.message_id = msg_dict['ENVELOPE'][9]
 
@@ -594,7 +594,7 @@ class Message(models.Model):
 
         for key, value in addresses.items():
             if value is not None:
-                addresses[key] = self.address_struct_to_addresses(value)
+                addresses[key] = address_struct_to_addresses(value)
 
         self.to = addresses['to']
         self.fro = addresses['from']
@@ -626,7 +626,7 @@ class Message(models.Model):
 
         for part in msg.walk():
             for key, header in part.items():
-                self.headers[key.lower()] = self._clean_header(header)
+                self.headers[key.lower()] = clean_header(header)
 
             payload = part.get_payload(decode=1)
             charset = part.get_content_charset()
@@ -652,39 +652,46 @@ class Message(models.Model):
         self.thread = thread
         self.save()
 
-    def address_struct_to_addresses(self, address_struct):
-        addresses = []
-        for name, at_domain, mailbox_name, host in address_struct:
-            if name is None:
-                addresses.append('%s@%s' % (mailbox_name, host))
-                continue
-            name = self._clean_header(name)
-            cleaned = '%s <%s@%s>' % (name, mailbox_name, host)
-            addresses.append(cleaned)
+
+def address_struct_to_addresses(address_struct):
+    """
+    Converts an IMAP "address structure" to a proper list of email
+    addresses with a format looking like:
+        ('First Last <username@example.com>',
+         'Other Dude <foo.bar@baz.org>')
+    """
+    addresses = []
+    for name, at_domain, mailbox_name, host in address_struct:
+        if name is None:
+            addresses.append('%s@%s' % (mailbox_name, host))
+            continue
+        name = clean_header(name)
+        cleaned = '%s <%s@%s>' % (name, mailbox_name, host)
+        addresses.append(cleaned)
         return addresses
 
-    @classmethod
-    def _clean_header(cls, header):
-        """
-        The headers returned by the IMAP server are not necessarily
-        human-friendly, especially if they contain non-ascii characters. This
-        function cleans all of this and return a beautiful, utf-8 encoded
-        header.
-        """
-        if header is None:
-            return ''
-        if header.startswith('"'):
-            header = header.replace('"', '')
-        cleaned = email.header.decode_header(header)
-        assembled = ''
-        for element in cleaned:
-            if assembled == '':
-                separator = ''
-            else:
-                separator = ' '
-            if element[1] is not None:
-                decoded = element[0].decode(element[1])
-            else:
-                decoded = element[0]
-            assembled += '%s%s' % (separator, decoded)
-        return assembled
+
+def clean_header(header):
+    """
+    The headers returned by the IMAP server are not necessarily
+    human-friendly, especially if they contain non-ascii characters. This
+    function cleans all of this and return a beautiful, utf-8 encoded
+    header.
+    """
+    if header is None:
+        return ''
+    if header.startswith('"'):
+        header = header.replace('"', '')
+    cleaned = email.header.decode_header(header)
+    assembled = ''
+    for element in cleaned:
+        if assembled == '':
+            separator = ''
+        else:
+            separator = ' '
+        if element[1] is not None:
+            decoded = element[0].decode(element[1])
+        else:
+            decoded = element[0]
+        assembled += '%s%s' % (separator, decoded)
+    return assembled

@@ -181,14 +181,20 @@ class Thread(Document):
         if update:
             self.save(safe=True)
 
-    def get_message_count(self):
+    @property
+    def messages_count(self):
         return len(self.messages)
 
     def get_info(self):
         senders = set()
         subject = ''
         read = True
+        date = self.date
         for m in self.messages:
+            if m.date < date:
+                date = m.date
+                subject = m.subject
+
             if not m.read:
                 read = False
             if not subject:
@@ -196,13 +202,9 @@ class Thread(Document):
             senders.add(m.fro)
 
         return {
-            'uid': m.uid,
             'read': read,
             'subject': subject,
             'senders': senders,
             'mailboxes': self.mailboxes,
             'date': self.date,
         }
-
-    def get_messages(self):
-        return Message.objects(thread=self)

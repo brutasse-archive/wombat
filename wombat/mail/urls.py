@@ -2,7 +2,7 @@ from django.conf.urls.defaults import *
 
 account = '(?P<account_slug>[\w-]+)'
 mbox = '(?P<mbox_id>\d+)'
-msg = '(?P<uid>\d+)'
+msg = '(?P<uid>[a-f0-9]{24})'
 
 urlpatterns = patterns('mail.views',
     url(r'^$', 'inbox', name='default_inbox'),

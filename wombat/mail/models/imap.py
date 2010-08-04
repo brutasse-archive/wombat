@@ -5,19 +5,13 @@
 # * Best practices: http://www.imapwiki.org/ClientImplementation
 # * IMAP4rev1 RFC: http://tools.ietf.org/html/rfc3501
 
-import email.header
-import email.parser
 import imapclient
-import mongoengine
 
 from django.conf import settings
 from django.db import models
-from django.utils.encoding import smart_unicode
-from django.utils.html import strip_tags
-from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
 
-from mail.fields import UUIDField, SeparatedValuesField
+from mail.models.mongo import Message, Thread
 
 # Folder types
 NORMAL = 100
@@ -451,52 +445,58 @@ class Mailbox(models.Model):
     def get_messages(self):
         return Message.objects(mailbox=self.id)
 
+    def get_uids_in_db(self):
+        """
+        Returns the UIDs of messages in this mailbox & stored in the DB
+        """
+        uids = set()
+        threads = Thread.objects(mailboxes=self.id)
+        for t in threads:
+            for m in t.messages:
+                if m.mailbox == self.id:
+                    uids.add(m.uid)
+        return uids
+
     def update_messages(self, connection=None):
         if connection is None:
             m = self.imap.get_connection()
         else:
             m = connection
 
-        db_uids = set([msg.uid for msg in self.get_messages().only('uid')])
+        db_uids = self.get_uids_in_db()
         imap_uids = set(self.get_uids(connection=m))
 
         remove_from_db = list(db_uids - imap_uids)
-        self.get_messages().filter(uid__in=remove_from_db).delete()
+        # TODO actually remove them from DB
 
-        fetch_from_imap = list(imap_uids - db_uids)
-        fetch_from_imap = map(str, fetch_from_imap)
+        fetch_from_imap = map(str, list(imap_uids - db_uids))
 
+        messages = ()
         if fetch_from_imap:
             print "Updating %s messages" % len(fetch_from_imap)
             messages = self.list_messages(force_uids=fetch_from_imap,
                                           connection=m)
-        else:
-            messages = ()
 
         if connection is None:
             m.logout()
 
         account_mailboxes = self.imap.directories.values_list('id', flat=True)
         for message in messages:
-            account_messages = Message.objects(mailbox__in=account_mailboxes)
             if message.message_id is None and message.in_reply_to is None:
                 message.assign_new_thread()
                 continue
 
             qs = []
             if message.message_id is not None:
-                qs.append({'in_reply_to': message.message_id})
+                qs.append({'messages__in_reply_to': message.message_id})
             if message.in_reply_to is not None:
-                qs.append({'message_id': message.in_reply_to})
-                qs.append({'in_reply_to': message.in_reply_to})
-
-            thread_messages = []
-            for query in qs:
-                thread_messages += account_messages.filter(**query)
+                qs.append({'messages__message_id': message.in_reply_to})
+                qs.append({'messages__in_reply_to': message.in_reply_to})
 
             threads = set()
-            for msg in thread_messages:
-                threads.add(msg.thread)
+            for query in qs:
+                for t in Thread.objects(mailboxes__in=account_mailboxes).filter(**query):
+                    threads.add(t)
 
             if not threads:
                 message.assign_new_thread()
@@ -504,246 +504,6 @@ class Mailbox(models.Model):
 
             current_thread = threads.pop()
             if len(threads) > 0:  # Merge threads
-                for msg in thread_messages:
-                    msg.update_thread(current_thread)
-
-                for empty_thread in threads:
-                    now_count = empty_thread.get_message_count()
-                    if now_count == 0:
-                        empty_thread.delete()
-                    else:
-                        print "%s is not empty (%s messages)" % (empty_thread,
-                                                                 now_count)
-            message.update_thread(current_thread)
-
-
-class Thread(mongoengine.Document):
-    """
-    Every message is tied to a thread. Putting it in the DB have several
-    advantages:
-        * Having reliable, persistent URLs for threads is trivial
-        * It makes it easy to regroup messages in the same thread even if
-          they're not in the same mailbox.
-    Threads are "flat", there is no tree structure. Sort of like gmail.
-    """
-    mailboxes = mongoengine.ListField(mongoengine.IntField())
-    date = mongoengine.DateTimeField()
-
-    meta = {
-        'indexes': ['mailboxes', 'date'],
-        'ordering': ['-date'],
-    }
-
-    def __unicode__(self):
-        return u'%s' % self.id
-
-    def get_message_count(self):
-        return len(Message.objects(thread=self))
-
-    def get_info(self):
-        messages = Message.objects(thread=self)
-        senders = set()
-        subject = ''
-        read = True
-        for m in Message.objects(thread=self):
-            if not m.read:
-                read = False
-            if not subject:
-                subject = m.subject
-            senders.add(m.fro)
-
-        return {
-            'uid': m.uid,
-            'read': read,
-            'subject': subject,
-            'senders': senders,
-            'mailboxes': self.mailboxes,
-            'date': self.date,
-        }
-
-    def get_messages(self):
-        return Message.objects(thread=self)
-
-
-class Message(mongoengine.Document):
-    uid = mongoengine.IntField()
-    message_id = mongoengine.StringField()
-    in_reply_to = mongoengine.StringField()
-    date = mongoengine.DateTimeField()
-    subject = mongoengine.StringField()
-    fro = mongoengine.StringField()  # I wish I could call it 'from'
-    to = mongoengine.ListField(mongoengine.StringField())
-    sender = mongoengine.StringField()
-    reply_to = mongoengine.StringField()
-    cc = mongoengine.ListField(mongoengine.StringField())
-    bcc = mongoengine.ListField(mongoengine.StringField())
-    size = mongoengine.IntField()
-    read = mongoengine.BooleanField(default=False)
-
-    # Fields fetched for each message individually
-    fetched = mongoengine.BooleanField(default=False)
-    body = mongoengine.StringField()
-    html_body = mongoengine.StringField()
-    mailbox = mongoengine.IntField()
-    thread = mongoengine.ReferenceField(Thread)
-
-    meta = {
-        'indexes': ['uid', 'message_id', 'in_reply_to', 'date'],
-        'ordering': ['date'],
-    }
-
-    def __unicode__(self):
-        return u'%s' % self.subject
-
-    def __init__(self, *args, **kwargs):
-        """
-        Creates a ``Message`` instance.
-
-        ``msg_dict`` can be passed to populate lots of attributes.
-        Set ``update`` to False if you don't want the model
-        to be saved.
-        """
-        msg_dict = kwargs.pop('msg_dict', None)
-        update = kwargs.pop('update', True)
-        super(Message, self).__init__(*args, **kwargs)
-
-        if msg_dict is not None:
-            self.parse_dict(msg_dict, update=update)
-        self.attachment = None # XXX see BODYSTRUCTURE
-
-    def parse_dict(self, msg_dict, update=True):
-        """
-        Parsed the response from a FETCH command and populates as
-        much headers as possible
-
-        if ``update`` is set to False, the model won't be saved
-        once parse.
-        """
-        self.read = imapclient.SEEN in msg_dict['FLAGS']
-        self.size = msg_dict['RFC822.SIZE']
-        self.date = msg_dict['INTERNALDATE']
-        self.subject = clean_header(msg_dict['ENVELOPE'][1])
-        self.in_reply_to = msg_dict['ENVELOPE'][8]
-        self.message_id = msg_dict['ENVELOPE'][9]
-
-        addresses = {
-            'from': msg_dict['ENVELOPE'][2],
-            'sender': msg_dict['ENVELOPE'][3],
-            'reply-to': msg_dict['ENVELOPE'][4],
-            'to': msg_dict['ENVELOPE'][5],
-            'cc': msg_dict['ENVELOPE'][6],
-            'bcc': msg_dict['ENVELOPE'][7],
-        }
-
-        for key, value in addresses.items():
-            if value is not None:
-                addresses[key] = address_struct_to_addresses(value)
-
-        self.to = addresses['to']
-        self.fro = addresses['from'][0]
-        self.sender = addresses['sender'][0]
-        self.reply_to = addresses['reply-to'][0]
-        self.cc = addresses['cc']
-        self.bcc = addresses['bcc']
-        if update:
-            self.save()
-
-    def fetch(self, m):
-        """
-        Fetches message content from the server.
-        ``m`` is an imapclient.IMAPClient instance, logged in.
-        """
-        m.select_folder(self.mailbox.name, readonly=True)
-        response = m.fetch([self.uid], ['RFC822', 'FLAGS'])
-        m.close_folder()
-        self.read = imapclient.SEEN in response[self.uid]['FLAGS']
-        self.parse(response[self.uid]['RFC822'])
-
-    def parse(self, raw_email, update=True):
-        """
-        Fetches the content of the message and populates the available headers
-        """
-        body = u''
-        html_body = u''
-        msg = email.parser.Parser().parsestr(raw_email)
-
-        for part in msg.walk():
-            for key, header in part.items():
-                self.headers[key.lower()] = clean_header(header)
-
-            payload = part.get_payload(decode=1)
-            charset = part.get_content_charset()
-            if charset is not None:
-                payload = payload.decode(charset)
-
-            if part.get_content_type() == 'text/plain':
-                body += payload
-
-            if part.get_content_type() == 'text/html':
-                html_body += payload
-
-        if not body:
-            body = unescape_entities(strip_tags(html_body))
-        self.body = body
-        self.html_body = html_body
-        if update:
-            self.save()
-
-    def assign_new_thread(self):
-        thread = Thread(date=self.date, mailboxes=[self.mailbox])
-        thread.save()
-        self.thread = thread
-        self.save()
-
-    def update_thread(self, thread):
-        thread.date = max(self.date, thread.date)
-        if not self.mailbox in thread.mailboxes:
-            thread.mailboxes.append(self.mailbox)
-        thread.save(safe=True)
-
-        self.thread = thread
-        self.save(safe=True)
-
-
-def address_struct_to_addresses(address_struct):
-    """
-    Converts an IMAP "address structure" to a proper list of email
-    addresses with a format looking like:
-        ('First Last <username@example.com>',
-         'Other Dude <foo.bar@baz.org>')
-    """
-    addresses = []
-    for name, at_domain, mailbox_name, host in address_struct:
-        if name is None:
-            addresses.append('%s@%s' % (mailbox_name, host))
-            continue
-        name = clean_header(name)
-        cleaned = '%s <%s@%s>' % (name, mailbox_name, host)
-        addresses.append(cleaned)
-    return addresses
-
-
-def clean_header(header):
-    """
-    The headers returned by the IMAP server are not necessarily
-    human-friendly, especially if they contain non-ascii characters. This
-    function cleans all of this and return a beautiful, utf-8 encoded
-    header.
-    """
-    if header is None:
-        return ''
-    if header.startswith('"'):
-        header = header.replace('"', '')
-    cleaned = email.header.decode_header(header)
-    assembled = ''
-    for element in cleaned:
-        if assembled == '':
-            separator = ''
-        else:
-            separator = ' '
-        if element[1] is not None:
-            decoded = element[0].decode(element[1])
-        else:
-            decoded = element[0]
-        assembled += '%s%s' % (separator, decoded)
-    return assembled
+                for thread in threads:
+                    current_thread.merge_with(thread)
+            current_thread.add_message(message)

@@ -40,8 +40,8 @@
     <li{% if not m.read %} class="new"{% endif %}>
       <input type="checkbox" name="m_{{ m.uid }}" />
       <a href="{% url message directory.imap.account.slug directory.id m.uid %}">
-          {% if m.headers.from %}<span class="from">{{ m.headers.from|from }}</span>{% endif %}
-        {{ m.headers.subject|default:"No subject" }}
+          {% if m.fro %}<span class="from">{{ m.fro|from }}</span>{% endif %}
+        {{ m.subject|default:"No subject" }}
         <span class="date">{{ m.date|hour_or_date }}</span>
         {% if m.attachment %}<img class="attachment" src="{{ MEDIA_URL }}img/attach.png" alt="paperclip"/>{% endif %}
       </a>

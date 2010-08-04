@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect
 from shortcuts import render
 from decorators import account_required
 
-from mail import models
+from mail.models import INBOX, IMAP, Message
 from mail.forms import MailForm, ActionForm, MoveForm
 
 
@@ -20,7 +20,7 @@ def inbox(request, account_slug=None):
         account = accounts[0]
     else:
         account = accounts.get(slug=account_slug)
-    inbox = account.imap.directories.get(folder_type=models.INBOX)
+    inbox = account.imap.directories.get(folder_type=INBOX)
     return directory(request, account.slug, inbox.id)
 
 
@@ -35,12 +35,16 @@ def compose(request):
 @login_required
 @account_required
 def directory(request, account_slug, mbox_id, page=1):
+    mbox_id = int(mbox_id)
+
+    begin = (page - 1) * 50
+    end = begin + 50
     # Filter with user profile to be sure you are looking at your mails !
     # TODO Replace account's id with something more fashion
     directory = request.user.get_profile().get_directory(mbox_id)
     context = {
         'directory': directory,
-        'threads': directory.get_messages(page)
+        'threads': Message.objects(mailbox=mbox_id)[begin:end],
     }
     return render(request, 'mail.html', context)
 
@@ -85,7 +89,7 @@ def message(request, account_slug, mbox_id, uid):
 @login_required
 @account_required
 def check_mail(request, account_slug):
-    imap = get_object_or_404(models.IMAP, account__slug=account_slug,
+    imap = get_object_or_404(IMAP, account__slug=account_slug,
                              account__profile=request.user.get_profile())
     imap.check_mail()
 

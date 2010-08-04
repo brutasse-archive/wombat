@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from mail.models import SMTP, IMAP, Thread, Mailbox, Message
+from mail.models import SMTP, IMAP, Mailbox
 
 
 class MailboxAdmin(admin.ModelAdmin):
@@ -8,14 +8,6 @@ class MailboxAdmin(admin.ModelAdmin):
                     'unread', 'total', 'parent')
 
 
-class MessageInline(admin.TabularInline):
-    model = Message
-
-class ThreadAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'get_message_count')
-    inlines = [MessageInline]
-
 admin.site.register(IMAP)
 admin.site.register(SMTP)
-admin.site.register(Thread, ThreadAdmin)
 admin.site.register(Mailbox, MailboxAdmin)

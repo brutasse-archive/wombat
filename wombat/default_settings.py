@@ -28,6 +28,9 @@ DATABASES = {
     }
 }
 
+from mongoengine import connect
+connect('wombat')
+
 SITE_ID = 1
 
 TIME_ZONE = 'Europe/Paris'

@@ -34,7 +34,7 @@ def hour_or_date(datetime_instance):
 
 @register.filter('from')
 def _from(value):
-    address = value[0].split()
+    address = value.split()
     if len(address) > 1:
         address = address[:-1]
     return ' '.join(address)

@@ -8,9 +8,11 @@
 import email.header
 import email.parser
 import imapclient
+import mongoengine
 
 from django.conf import settings
 from django.db import models
+from django.utils.encoding import smart_unicode
 from django.utils.html import strip_tags
 from django.utils.text import unescape_entities
 from django.utils.translation import ugettext_lazy as _
@@ -333,7 +335,8 @@ class Mailbox(models.Model):
 
         messages = []
         for uid, msg in response.items():
-            message = Message(uid=uid, mailbox=self, msg_dict=msg, update=False)
+            message = Message(uid=uid, mailbox=self.id,
+                              msg_dict=msg, update=False)
             messages.append(message)
 
         messages.sort(key=lambda msg: msg.date, reverse=True)
@@ -445,21 +448,26 @@ class Mailbox(models.Model):
         trash = self.imap.directories.filter(folder_type=TRASH).get()
         return self.move_message(uid, trash.name, connection=connection)
 
+    def get_messages(self):
+        return Message.objects(mailbox=self.id)
+
     def update_messages(self, connection=None):
         if connection is None:
             m = self.imap.get_connection()
         else:
             m = connection
 
-        db_uids = self.messages.values_list('uid', flat=True)
+        db_uids = [msg.uid for msg in self.get_messages().only('uid')]
         imap_uids = self.get_uids(connection=m)
 
         remove_from_db = filter(lambda x: x not in imap_uids, db_uids)
-        self.messages.filter(uid__in=remove_from_db).delete()
+        self.get_messages().filter(uid__in=remove_from_db).delete()
 
-        fetch_from_imap = map(str, filter(lambda x: x not in db_uids, imap_uids))
+        fetch_from_imap = filter(lambda x: x not in db_uids, imap_uids))
+        fetch_from_imap = map(str, fetch_from_imap)
+
         if fetch_from_imap:
-            print "Updating %s messages" % len(imap_uids)
+            print "Updating %s messages" % len(fetch_from_imap)
             messages = self.list_messages(force_uids=fetch_from_imap,
                                           connection=m)
         else:
@@ -468,35 +476,48 @@ class Mailbox(models.Model):
         if connection is None:
             m.logout()
 
-        account_messages = Message.objects.filter(mailbox__imap=self.imap)
+        account_mailboxes = self.imap.directories.values_list('id', flat=True)
         for message in messages:
+            account_messages = Message.objects(mailbox__in=account_mailboxes)
             if message.message_id is None and message.in_reply_to is None:
                 message.assign_new_thread()
                 continue
 
-            qs = None
+            qs = []
             if message.message_id is not None:
-                qs = models.Q(in_reply_to=message.message_id)
+                qs.append({'in_reply_to': message.message_id})
             if message.in_reply_to is not None:
-                if qs:
-                    qs = qs | models.Q(message_id=message.in_reply_to)
-                else:
-                    qs = models.Q(message_id=message.in_reply_to)
-                qs = qs | models.Q(in_reply_to=message.in_reply_to)
+                qs.append({'message_id': message.in_reply_to})
+                qs.append({'in_reply_to': message.in_reply_to})
 
-            thread_messages = account_messages.filter(qs)
-            if not thread_messages:
+            thread_messages = []
+            for query in qs:
+                thread_messages += account_messages.filter(**query)
+
+            threads = []
+            for msg in thread_messages:
+                if not msg.thread in threads:
+                    threads.append(msg.thread)
+
+            if not threads:
                 message.assign_new_thread()
                 continue
 
-            if len(thread_messages) > 1:  # Merge threads
-                # FIXME delete empty threads
-                thread_messages.update(thread=thread_messages[0].thread)
+            if len(threads) > 1:  # Merge threads
+                for msg in thread_messages:
+                    msg.thread = thread_messages[0].thread
+                    msg.save()
+                delete_ids = []
+                for t in thread_messages:
+                    if t.thread != thread_messages[0]:
+                        delete_ids.append(t.thread.id)
+                print "DELETE", delete_ids
+                Thread.objects(id__in=delete_ids).delete()
             message.thread = thread_messages[0].thread
             message.save()
 
 
-class Thread(models.Model):
+class Thread(mongoengine.Document):
     """
     Every message is tied to a thread. Putting it in the DB have several
     advantages:
@@ -505,51 +526,44 @@ class Thread(models.Model):
           they're not in the same mailbox.
     Threads are "flat", there is no tree structure. Sort of like gmail.
     """
-    uuid = UUIDField(primary_key=True, editable=False)
+    pass
 
     def __unicode__(self):
-        return u'%s' % self.uuid
-
-    class Meta:
-        app_label = 'mail'
+        return u'%s' % self.id
 
     def get_message_count(self):
-        return self.messages.count()
+        return len(Message.objects(thread=self))
 
 
-class Message(models.Model):
-    # Fields fetched from message lists
-    uid = models.PositiveIntegerField()
-    message_id = models.CharField(_('Message ID'), max_length=1023,
-                                  db_index=True, null=True)
-    in_reply_to = models.CharField(_('In reply to'), max_length=1023,
-                                  db_index=True, null=True)
-    date = models.DateTimeField(_('Date'))
-    subject = models.CharField(_('Subject'), max_length=1023)
-    fro = models.TextField(_('From'))  # I wish I could call it 'from'
-    to = SeparatedValuesField(_('To'), null=True)
-    sender = models.TextField(_('Sender'))
-    reply_to = models.TextField(_('Reply to'), null=True)
-    cc = SeparatedValuesField(_('Cc'), null=True)
-    bcc = SeparatedValuesField(_('Bcc'), null=True)
-    size = models.PositiveIntegerField(_('Size'))
-    read = models.BooleanField(_('Read'), default=False)
+class Message(mongoengine.Document):
+    uid = mongoengine.IntField()
+    message_id = mongoengine.StringField()
+    in_reply_to = mongoengine.StringField()
+    date = mongoengine.DateTimeField()
+    subject = mongoengine.StringField()
+    fro = mongoengine.StringField()  # I wish I could call it 'from'
+    to = mongoengine.ListField(mongoengine.StringField())
+    sender = mongoengine.StringField()
+    reply_to = mongoengine.StringField()
+    cc = mongoengine.ListField(mongoengine.StringField())
+    bcc = mongoengine.ListField(mongoengine.StringField())
+    size = mongoengine.IntField()
+    read = mongoengine.BooleanField(default=False)
 
     # Fields fetched for each message individually
-    fetched = models.BooleanField(_('Fetched'), default=False)
-    body = models.TextField(_('Body'), null=True)
-    html_body = models.TextField(_('HTML Body'), null=True)
+    fetched = mongoengine.BooleanField(default=False)
+    body = mongoengine.StringField()
+    html_body = mongoengine.StringField()
+    mailbox = mongoengine.IntField()
+    thread = mongoengine.ReferenceField(Thread)
 
-    mailbox = models.ForeignKey(Mailbox, verbose_name=_('Mailbox'),
-                               related_name='messages')
-    thread = models.ForeignKey(Thread, verbose_name=_('Thread'),
-                               related_name='messages')
+    meta = {
+        'indexes': ['uid', 'message_id', 'in_reply_to', 'date'],
+        'ordering': ['-date'],
+    }
 
     def __unicode__(self):
         return u'%s' % self.subject
-
-    class Meta:
-        app_label = 'mail'
 
     def __init__(self, *args, **kwargs):
         """
@@ -575,7 +589,6 @@ class Message(models.Model):
         if ``update`` is set to False, the model won't be saved
         once parse.
         """
-        print msg_dict
         self.read = imapclient.SEEN in msg_dict['FLAGS']
         self.size = msg_dict['RFC822.SIZE']
         self.date = msg_dict['INTERNALDATE']
@@ -597,9 +610,9 @@ class Message(models.Model):
                 addresses[key] = address_struct_to_addresses(value)
 
         self.to = addresses['to']
-        self.fro = addresses['from']
-        self.sender = addresses['sender']
-        self.reply_to = addresses['reply-to']
+        self.fro = addresses['from'][0]
+        self.sender = addresses['sender'][0]
+        self.reply_to = addresses['reply-to'][0]
         self.cc = addresses['cc']
         self.bcc = addresses['bcc']
         if update:
@@ -668,7 +681,7 @@ def address_struct_to_addresses(address_struct):
         name = clean_header(name)
         cleaned = '%s <%s@%s>' % (name, mailbox_name, host)
         addresses.append(cleaned)
-        return addresses
+    return addresses
 
 
 def clean_header(header):

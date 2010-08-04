@@ -505,8 +505,7 @@ class Mailbox(models.Model):
             current_thread = threads.pop()
             if len(threads) > 0:  # Merge threads
                 for msg in thread_messages:
-                    msg.thread = current_thread
-                    msg.save(safe=True)
+                    msg.update_thread(current_thread)
 
                 for empty_thread in threads:
                     now_count = empty_thread.get_message_count()
@@ -515,8 +514,7 @@ class Mailbox(models.Model):
                     else:
                         print "%s is not empty (%s messages)" % (empty_thread,
                                                                  now_count)
-            message.thread = current_thread
-            message.save()
+            message.update_thread(current_thread)
 
 
 class Thread(mongoengine.Document):
@@ -528,13 +526,43 @@ class Thread(mongoengine.Document):
           they're not in the same mailbox.
     Threads are "flat", there is no tree structure. Sort of like gmail.
     """
-    pass
+    mailboxes = mongoengine.ListField(mongoengine.IntField())
+    date = mongoengine.DateTimeField()
+
+    meta = {
+        'indexes': ['mailboxes', 'date'],
+        'ordering': ['-date'],
+    }
 
     def __unicode__(self):
         return u'%s' % self.id
 
     def get_message_count(self):
         return len(Message.objects(thread=self))
+
+    def get_info(self):
+        messages = Message.objects(thread=self)
+        senders = set()
+        subject = ''
+        read = True
+        for m in Message.objects(thread=self):
+            if not m.read:
+                read = False
+            if not subject:
+                subject = m.subject
+            senders.add(m.fro)
+
+        return {
+            'uid': m.uid,
+            'read': read,
+            'subject': subject,
+            'senders': senders,
+            'mailboxes': self.mailboxes,
+            'date': self.date,
+        }
+
+    def get_messages(self):
+        return Message.objects(thread=self)
 
 
 class Message(mongoengine.Document):
@@ -561,7 +589,7 @@ class Message(mongoengine.Document):
 
     meta = {
         'indexes': ['uid', 'message_id', 'in_reply_to', 'date'],
-        'ordering': ['-date'],
+        'ordering': ['date'],
     }
 
     def __unicode__(self):
@@ -662,10 +690,19 @@ class Message(mongoengine.Document):
             self.save()
 
     def assign_new_thread(self):
-        thread = Thread()
+        thread = Thread(date=self.date, mailboxes=[self.mailbox])
         thread.save()
         self.thread = thread
         self.save()
+
+    def update_thread(self, thread):
+        thread.date = max(self.date, thread.date)
+        if not self.mailbox in thread.mailboxes:
+            thread.mailboxes.append(self.mailbox)
+        thread.save(safe=True)
+
+        self.thread = thread
+        self.save(safe=True)
 
 
 def address_struct_to_addresses(address_struct):

@@ -22,6 +22,8 @@ Download
 Development
 -----------
 
+You need a SQL database and a MongoDB one.
+
 Under the ``wombat/wombat`` directory, create a minmal ``settings.py`` file::
 
     from default_settings import *
@@ -30,7 +32,7 @@ Under the ``wombat/wombat`` directory, create a minmal ``settings.py`` file::
 whatever you want. For example, to add the debug toolbar::
 
     INSTALLED_APPS = INSTALLED_APPS + (
-    'debug_toolbar',
+        'debug_toolbar',
     )   
 
     MIDDLEWARE_CLASSES = MIDDLEWARE_CLASSES + (

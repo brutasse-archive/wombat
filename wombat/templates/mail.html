@@ -36,16 +36,18 @@
   Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
   {% include "inc/messagecount.html" %}
   <ul id="messages">
-    {% for m in threads %}
+    {% for thread in threads %}
+    {% with thread.get_info as m %}
     <li{% if not m.read %} class="new"{% endif %}>
       <input type="checkbox" name="m_{{ m.uid }}" />
       <a href="{% url message directory.imap.account.slug directory.id m.uid %}">
-          {% if m.fro %}<span class="from">{{ m.fro|from }}</span>{% endif %}
+          {% if m.senders %}<span class="from">{{ m.senders|from }}</span>{% endif %}
         {{ m.subject|default:"No subject" }}
         <span class="date">{{ m.date|hour_or_date }}</span>
         {% if m.attachment %}<img class="attachment" src="{{ MEDIA_URL }}img/attach.png" alt="paperclip"/>{% endif %}
       </a>
     </li>
+    {% endwith %}
     {% empty %}
     <li>{% trans 'Hooray, no message here' %}!</li>
     {% endfor %}

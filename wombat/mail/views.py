@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect
 from shortcuts import render
 from decorators import account_required
 
-from mail.models import INBOX, IMAP, Message
+from mail.models import INBOX, IMAP, Message, Thread
 from mail.forms import MailForm, ActionForm, MoveForm
 
 
@@ -36,15 +36,16 @@ def compose(request):
 @account_required
 def directory(request, account_slug, mbox_id, page=1):
     mbox_id = int(mbox_id)
-
     begin = (page - 1) * 50
     end = begin + 50
+
+    threads = Thread.objects(mailboxes=mbox_id)[begin:end]
     # Filter with user profile to be sure you are looking at your mails !
     # TODO Replace account's id with something more fashion
     directory = request.user.get_profile().get_directory(mbox_id)
     context = {
         'directory': directory,
-        'threads': Message.objects(mailbox=mbox_id)[begin:end],
+        'threads': threads,
     }
     return render(request, 'mail.html', context)
 

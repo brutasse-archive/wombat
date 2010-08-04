@@ -135,7 +135,7 @@ ul#messages, ul#messages li:last-child {border-bottom: 1px solid #d1d5d8;}
 	position: relative;
 }
 
-.from {color: #666; font-weight: bold; display: inline-block; width: 200px;}
+.from {color: #666; font-weight: bold; display: inline-block; width: 200px; overflow: hidden; margin: -3px 0;}
 .new .from {color: #000;}
 .date, .attachment {float: right; padding: 0 2px;}
 .date { position: absolute; right: 2px; bottom: 3px; }

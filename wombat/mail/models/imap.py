@@ -457,13 +457,13 @@ class Mailbox(models.Model):
         else:
             m = connection
 
-        db_uids = [msg.uid for msg in self.get_messages().only('uid')]
-        imap_uids = self.get_uids(connection=m)
+        db_uids = set([msg.uid for msg in self.get_messages().only('uid')])
+        imap_uids = set(self.get_uids(connection=m))
 
-        remove_from_db = filter(lambda x: x not in imap_uids, db_uids)
+        remove_from_db = list(db_uids - imap_uids)
         self.get_messages().filter(uid__in=remove_from_db).delete()
 
-        fetch_from_imap = filter(lambda x: x not in db_uids, imap_uids))
+        fetch_from_imap = list(imap_uids - db_uids)
         fetch_from_imap = map(str, fetch_from_imap)
 
         if fetch_from_imap:
@@ -494,26 +494,28 @@ class Mailbox(models.Model):
             for query in qs:
                 thread_messages += account_messages.filter(**query)
 
-            threads = []
+            threads = set()
             for msg in thread_messages:
-                if not msg.thread in threads:
-                    threads.append(msg.thread)
+                threads.add(msg.thread)
 
             if not threads:
                 message.assign_new_thread()
                 continue
 
-            if len(threads) > 1:  # Merge threads
+            current_thread = threads.pop()
+            if len(threads) > 0:  # Merge threads
                 for msg in thread_messages:
-                    msg.thread = thread_messages[0].thread
-                    msg.save()
-                delete_ids = []
-                for t in thread_messages:
-                    if t.thread != thread_messages[0]:
-                        delete_ids.append(t.thread.id)
-                print "DELETE", delete_ids
-                Thread.objects(id__in=delete_ids).delete()
-            message.thread = thread_messages[0].thread
+                    msg.thread = current_thread
+                    msg.save(safe=True)
+
+                for empty_thread in threads:
+                    now_count = empty_thread.get_message_count()
+                    if now_count == 0:
+                        empty_thread.delete()
+                    else:
+                        print "%s is not empty (%s messages)" % (empty_thread,
+                                                                 now_count)
+            message.thread = current_thread
             message.save()
 
 

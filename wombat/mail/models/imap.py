@@ -468,7 +468,16 @@ class Mailbox(models.Model):
         imap_uids = set(self.get_uids(connection=m))
 
         remove_from_db = list(db_uids - imap_uids)
-        # TODO actually remove them from DB
+        threads_remove = Thread.objects(mailboxes=self.id,
+                                         messages__uid__in=remove_from_db)
+        for t in threads_remove:
+            for msg in t.messages:
+                if msg.mailbox == self.id and msg.uid in remove_from_db:
+                    t.messages.remove(msg)
+                    if len(t.messages) == 0:
+                        t.delete()
+                    else:
+                        t.save(safe=True)
 
         fetch_from_imap = map(str, list(imap_uids - db_uids))
 

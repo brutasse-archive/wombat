@@ -35,6 +35,7 @@
 {% block panel %}
 	<div class="actions">
 		Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
+		<a href="{% url check_directory directory.imap.account.slug directory.id %}">Update</a>
 		{% include "inc/messagecount.html" %}
 	</div>
   <ul id="messages">
@@ -72,6 +73,7 @@
 <a href="{% url compose %}">Compose</a>
 {% endif %}
 <h2><a href="{% url account_inbox account.slug %}">{{ account.name }}</a></h2>
+<p><a href="{% url check_mail account.slug %}">Check mail</a></p>
 
 {% with account.common_directories as directories %}
 {% include "inc/directory.html" %}

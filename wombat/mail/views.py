@@ -99,3 +99,12 @@ def check_mail(request, account_slug):
 
     # TODO make sure the 'from' field is safe
     return redirect(request.GET.get('from', reverse('default_inbox')))
+
+
+def check_directory(request, account_slug, mbox_id):
+    mbox_id = int(mbox_id)
+    imap = get_object_or_404(IMAP, account__slug=account_slug,
+                             account__profile=request.user.get_profile())
+    directory = imap.directories.get(pk=mbox_id)
+    directory.update_messages()
+    return redirect(reverse('directory', args=[account_slug, mbox_id]))

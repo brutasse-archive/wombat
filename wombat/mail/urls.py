@@ -10,6 +10,10 @@ urlpatterns = patterns('mail.views',
     url(r'^%(account)s/$' % locals(), 'inbox', name='account_inbox'),
     url(r'^%(account)s/check/$' % locals(), 'check_mail', name='check_mail'),
     url(r'^%(account)s/%(mbox)s/$' % locals(), 'directory', name='directory'),
+
+    url(r'^%(account)s/%(mbox)s/check/$' % locals(),
+        'check_directory', name='check_directory'),
+
     url(r'^%(account)s/%(mbox)s/%(msg)s/$' % locals(),
         'message', name='message'),
 )

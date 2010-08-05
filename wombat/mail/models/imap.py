@@ -120,7 +120,7 @@ class IMAP(models.Model):
         else:
             m = connection
 
-        for directory in self.directories.all():
+        for directory in self.directories.exclude(no_select=True):
             directory.count_messages(connection=m)
         m.logout()
 

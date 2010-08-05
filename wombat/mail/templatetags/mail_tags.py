@@ -34,6 +34,7 @@ def hour_or_date(datetime_instance):
 
     return datetime_instance.strftime(time_format)
 
+
 @register.filter('from')
 def _from(value):
     value = list(value)

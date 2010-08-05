@@ -179,6 +179,10 @@ class Thread(Document):
     def messages_count(self):
         return len(self.messages)
 
+    def get_mailboxes(self):
+        from mail.models import Mailbox
+        return Mailbox.objects.filter(id__in=self.mailboxes)
+
     def get_info(self):
         senders = set()
         subject = ''

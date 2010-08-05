@@ -33,8 +33,10 @@
 
 <div class="panel">
 {% block panel %}
-  Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
-  {% include "inc/messagecount.html" %}
+	<div class="actions">
+		Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
+		{% include "inc/messagecount.html" %}
+	</div>
   <ul id="messages">
     {% for thread in threads %}
     {% with thread.get_info as m %}
@@ -54,8 +56,10 @@
     <li>{% trans 'Hooray, no message here' %}!</li>
     {% endfor %}
   </ul>
-  Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
-  {% include "inc/messagecount.html" %}
+	<div class="actions">
+  	Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
+	  {% include "inc/messagecount.html" %}
+	</div>
 {% endblock %}
 </div>
 

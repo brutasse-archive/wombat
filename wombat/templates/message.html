@@ -1,18 +1,35 @@
 {% extends "mail.html" %}
 
 {% block panel %}
-{% include 'inc/message_menu.html' %}
-{% for message in thread.messages %}
-<div class="message">
-  <h2>{{ message.subject|default:_("No subject") }}</h2>
-  <ul class="headers">
-    <li>From: {{ message.fro }}</li>
-    <li>To: {{ message.to|join:", " }}</li>
-    {% if message.cc %}<li>Cc: {{ message.cc|join:", " }}</li>{% endif %}
-    <li>Date: {{ message.date|date }}</li>
-  </ul>
-  <p>{{ message.body|urlize|linebreaks}}</p>
+<div class="actions">
+	{% include 'inc/message_menu.html' %}
 </div>
-{% endfor %}
-{% include 'inc/message_menu.html' %}
+<div id="thread">
+	{% for message in thread.messages %}
+	{% if forloop.first %}
+	<h2>{{ message.subject|default:_("No subject") }}{% for label in thread.get_mailboxes %} <span>{{ label }}</span>{% endfor %}</h2>
+	{% endif %}
+	<div class="message{% if message.read and not forloop.last %} collapsed{% endif %}">
+		<div class="msg_header">{{ message.fro }} - {{ message.date|date }}</div>
+		<ul class="headers">
+			<li><strong>From:</strong> {{ message.fro }}</li>
+			<li><strong>To:</strong> {{ message.to|join:", " }}</li>
+			{% if message.cc %}<li><strong>Cc:</strong> {{ message.cc|join:", " }}</li>{% endif %}
+			<li><strong>Date:</strong> {{ message.date|date }}</li>
+		</ul>
+		<div class="body">
+			<p>{{ message.body|urlize|linebreaksbr}}</p>
+		</div>
+	</div>
+	{% endfor %}
+</div>
+<div class="actions">
+	{% include 'inc/message_menu.html' %}
+</div>
+
+<script type="text/javascript">
+	$('.collapsed').click(function() {
+			$(this).removeClass('collapsed');
+	});
+</script>
 {% endblock %}

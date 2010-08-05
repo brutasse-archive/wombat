@@ -12,6 +12,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from mail.models.mongo import Message, Thread
+from mail.utils import clean_subject
 
 # Folder types
 NORMAL = 100
@@ -334,7 +335,7 @@ class Mailbox(models.Model):
             messages.append(message)
 
         messages.sort(key=lambda msg: msg.date, reverse=True)
-        return messages
+        return reversed(messages)
 
     def count_messages(self, connection=None, update=True):
         """
@@ -497,6 +498,17 @@ class Mailbox(models.Model):
             for query in qs:
                 for t in Thread.objects(mailboxes__in=account_mailboxes).filter(**query):
                     threads.add(t)
+
+            if not threads:
+                subject = clean_subject(message.subject)
+                if subject != message.subject:
+                    # This is a Re: RE or whatever without any In-Reply-To.
+                    # Trying to guess which thread it's in.
+                    thrds = Thread.objects(mailboxes__in=account_mailboxes)
+                    thrds = thrds.filter(messages__subject=subject)
+                    for t in thrds.order_by('-date'):
+                        threads.add(t)
+                        break
 
             if not threads:
                 message.assign_new_thread()

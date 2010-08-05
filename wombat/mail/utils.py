@@ -1,4 +1,7 @@
 import email.header
+import re
+
+SUBJECT_RE = re.compile(r'^(\[[^\]]+\])?\s*re\s*:\s+(.*)$', re.IGNORECASE)
 
 
 def address_struct_to_addresses(address_struct):
@@ -43,3 +46,14 @@ def clean_header(header):
             decoded = element[0]
         assembled += '%s%s' % (separator, decoded)
     return assembled
+
+
+def clean_subject(subject):
+    """
+    Removes the Re: RE : RE: crap from a subject.
+    """
+    match = SUBJECT_RE.match(subject)
+    while match:
+        subject = ' '.join([m for m in match.groups() if m is not None])
+        match = SUBJECT_RE.match(subject)
+    return subject

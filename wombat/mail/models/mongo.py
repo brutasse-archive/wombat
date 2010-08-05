@@ -165,6 +165,9 @@ class Thread(Document):
         """
         Steal the messages stored in ``other_thread`` and delete it
         """
+        if self.id == other_thread.id:
+            # Nothing to merge with
+            return
         for msg in other_thread.messages:
             self.add_message(msg, update=False)
         self.save(safe=True)

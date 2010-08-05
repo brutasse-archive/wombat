@@ -27,6 +27,8 @@ def hour_or_date(datetime_instance):
 #            tzinfo=LocalTimezone(datetime.datetime.now()))
     if datetime_instance > today_midnight:
         time_format = '%H:%M'
+    elif datetime_instance.year < today.year:
+        time_format = '%d/%m/%y'
     else:
         time_format = '%b %d'
 

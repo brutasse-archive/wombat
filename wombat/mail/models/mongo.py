@@ -94,18 +94,7 @@ class Message(EmbeddedDocument):
         if update:
             self.save()
 
-    def fetch(self, m):
-        """
-        Fetches message content from the server.
-        ``m`` is an imapclient.IMAPClient instance, logged in.
-        """
-        m.select_folder(self.mailbox.name, readonly=True)
-        response = m.fetch([self.uid], ['RFC822', 'FLAGS'])
-        m.close_folder()
-        self.read = imapclient.SEEN in response[self.uid]['FLAGS']
-        self.parse(response[self.uid]['RFC822'])
-
-    def parse(self, raw_email, update=True):
+    def parse(self, raw_email):
         """
         Fetches the content of the message and populates the available headers
         """
@@ -114,8 +103,8 @@ class Message(EmbeddedDocument):
         msg = email.parser.Parser().parsestr(raw_email)
 
         for part in msg.walk():
-            for key, header in part.items():
-                self.headers[key.lower()] = clean_header(header)
+            #for key, header in part.items():
+            #    self.headers[key.lower()] = clean_header(header)
 
             payload = part.get_payload(decode=1)
             charset = part.get_content_charset()
@@ -131,14 +120,16 @@ class Message(EmbeddedDocument):
         if not body:
             body = unescape_entities(strip_tags(html_body))
         self.body = body
-        self.html_body = html_body
-        if update:
-            self.save()
+        #self.html_body = html_body
+
+    def update_flags(self, flags):
+        self.read = imapclient.SEEN in flags
 
     def assign_new_thread(self):
         thread = Thread(date=self.date, mailboxes=[self.mailbox],
                         messages=[self])
         thread.save(safe=True)
+
 
 class Thread(Document):
     """
@@ -211,3 +202,35 @@ class Thread(Document):
             'mailboxes': self.mailboxes,
             'date': self.date,
         }
+
+    def find_missing(self):
+        """
+        Retuns a dict of {mailboxes: uids} that have not been fetched yet.
+        """
+        missing = {}
+        for message in self.messages:
+            if not message.body:
+                if message.mailbox in missing:
+                    missing[message.mailbox].append(message.uid)
+                else:
+                    missing[message.mailbox] = [message.uid]
+        return missing
+
+    def fetch_missing(self):
+        """
+        Fetches the content of the messages that haven't been fetched yet.
+        """
+        from mail.models import Mailbox
+        missing = self.find_missing()
+        if not missing:
+            return
+
+        mailboxes = Mailbox.objects.filter(id__in=missing.keys())
+        connection = mailboxes[0].imap.get_connection()
+        for mailbox in mailboxes:
+            response = mailbox.fetch_messages(missing[mailbox.id], connection)
+            for msg in self.messages:
+                if msg.mailbox == mailbox.id and msg.uid in response:
+                    msg.parse(response[msg.uid]['RFC822'])
+                    msg.update_flags(response[msg.uid]['FLAGS'])
+        self.save(safe=True)

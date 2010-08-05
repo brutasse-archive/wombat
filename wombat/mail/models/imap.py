@@ -519,3 +519,12 @@ class Mailbox(models.Model):
                 for thread in threads:
                     current_thread.merge_with(thread)
             current_thread.add_message(message)
+
+    def fetch_messages(self, uids, m):
+        """
+        Fetch the content of a few messages, given the UID.
+        """
+        m.select_folder(self.name, readonly=True)
+        response = m.fetch(uids, ['RFC822', 'FLAGS'])
+        m.close_folder()
+        return response

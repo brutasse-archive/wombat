@@ -77,10 +77,15 @@ def message(request, account_slug, mbox_id, uid):
 
         return redirect(reverse('directory', args=[account_slug, mbox_id]))
 
+    thread = Thread.objects(id=uid)[0]
+    thread.fetch_missing()
+    for m in thread.messages:
+        print m.subject, m.fro
+
     context = {
         'directory': directory,
-        'message': directory.get_message(uid),
-        'move_form': MoveForm(directory.mailbox, exclude=directory),
+        'thread': thread,
+        'move_form': MoveForm(directory.imap, exclude=directory),
         'unread_form': ActionForm('unread'),
         'delete_form': ActionForm('delete'),
     }

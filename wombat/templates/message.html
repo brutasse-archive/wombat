@@ -2,15 +2,17 @@
 
 {% block panel %}
 {% include 'inc/message_menu.html' %}
+{% for message in thread.messages %}
 <div class="message">
-  <h2>{{ message.headers.subject|default:_("No subject") }}</h2>
+  <h2>{{ message.subject|default:_("No subject") }}</h2>
   <ul class="headers">
-    <li>From: {{ message.headers.from }}</li>
-    <li>To: {{ message.headers.to }}</li>
-    {% if message.headers.cc %}<li>Cc: {{ message.headers.cc }}</li>{% endif %}
-    <li>Date: {{ message.headers.date }}</li>
+    <li>From: {{ message.fro }}</li>
+    <li>To: {{ message.to|join:", " }}</li>
+    {% if message.cc %}<li>Cc: {{ message.cc|join:", " }}</li>{% endif %}
+    <li>Date: {{ message.date|date }}</li>
   </ul>
   <p>{{ message.body|urlize|linebreaks}}</p>
 </div>
+{% endfor %}
 {% include 'inc/message_menu.html' %}
 {% endblock %}

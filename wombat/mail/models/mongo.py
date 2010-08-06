@@ -152,6 +152,14 @@ class Thread(Document):
     def __unicode__(self):
         return u'%s' % self.id
 
+    @property
+    def subject(self):
+        return self.messages[0].subject
+
+    @property
+    def messages_count(self):
+        return len(self.messages)
+
     def merge_with(self, other_thread):
         """
         Steal the messages stored in ``other_thread`` and delete it
@@ -169,15 +177,27 @@ class Thread(Document):
         Appends a message to the thread and updates relevant parameters
         """
         self.date = max(self.date, message.date)
-        if not message.mailbox in self.mailboxes:
-            self.mailboxes.append(message.mailbox)
+        self.mailboxes = list(set([m.mailbox for m in self.messages]))
         self.messages.append(message)
+        self.messages.sort(key=lambda m: m.date)
         if update:
             self.save(safe=True)
 
-    @property
-    def messages_count(self):
-        return len(self.messages)
+    def remove_message(self, mailbox_id, message_ids, update=True):
+        to_remove = []
+        for msg in self.messages:
+            if msg.mailbox == mailbox_id and msg.uid in message_ids:
+                to_remove.append(msg)
+        for msg in to_remove:
+            self.messages.remove(msg)
+
+        if len(self.messages) == 0:
+            self.delete()
+            return
+
+        self.mailboxes = list(set([m.mailbox for m in self.messages]))
+        if update:
+            self.save()
 
     def get_mailboxes(self):
         from mail.models import Mailbox

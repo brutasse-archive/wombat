@@ -443,9 +443,6 @@ class Mailbox(models.Model):
         trash = self.imap.directories.filter(folder_type=TRASH).get()
         return self.move_message(uid, trash.name, connection=connection)
 
-    def get_messages(self):
-        return Message.objects(mailbox=self.id)
-
     def get_uids_in_db(self):
         """
         Returns the UIDs of messages in this mailbox & stored in the DB
@@ -469,15 +466,9 @@ class Mailbox(models.Model):
 
         remove_from_db = list(db_uids - imap_uids)
         threads_remove = Thread.objects(mailboxes=self.id,
-                                         messages__uid__in=remove_from_db)
+                                        messages__uid__in=remove_from_db)
         for t in threads_remove:
-            for msg in t.messages:
-                if msg.mailbox == self.id and msg.uid in remove_from_db:
-                    t.messages.remove(msg)
-                    if len(t.messages) == 0:
-                        t.delete()
-                    else:
-                        t.save(safe=True)
+            t.remove_message(self.id, remove_from_db)
 
         fetch_from_imap = map(str, list(imap_uids - db_uids))
 

@@ -21,7 +21,8 @@ def numberize(instance, count_attr):
 def hour_or_date(datetime_instance):
     """Intelligent date display:
      * If the date is today, only display the hour
-     * if the date is before today, display the day+month"""
+     * if the date is before today, display the day+month
+    """
     today = datetime.date.today()
     today_midnight = datetime.datetime(today.year, today.month, today.day)
 #            tzinfo=LocalTimezone(datetime.datetime.now()))

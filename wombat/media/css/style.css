@@ -164,10 +164,7 @@ ul#messages {
 	font-size: 0.5em;
 	margin: 0 3px;
 	padding: 2px 3px;
-	background-color: #6af;
-	color: #fff;
-	text-shadow: -1px -1px 0px #48f;
-	border: 1px solid #eee;
+	border: 1px solid #ccc;
   border-radius: 3px; /* CSS 3 */
   -moz-border-radius: 3px;
   -webkit-border-radius: 3px;

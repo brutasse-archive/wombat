@@ -40,19 +40,20 @@
 	</div>
   <ul id="messages">
     {% for thread in threads %}
-    {% with thread.get_info as m %}
-    <li{% if not m.read %} class="new"{% endif %}>
-      <input type="checkbox" name="m_{{ m.uid }}" />
+    <li{% if not thread.read %} class="new"{% endif %}>
+      <input type="checkbox" name="m_{{ thread.id }}" />
       <a href="{% url message directory.imap.account.slug directory.id thread.id %}">
-        <span class="from">{{ m.senders|from }}
+        <span class="from">{{ thread.senders|from }}
           {% if thread.messages_count > 1 %}({{ thread.messages_count }}){% endif %}
         </span>
-        {{ m.subject|default:"No subject" }}
-        <span class="date">{{ m.date|hour_or_date }}</span>
-        {% if m.attachment %}<img class="attachment" src="{{ MEDIA_URL }}img/attach.png" alt="paperclip"/>{% endif %}
+				{% for mbox in thread.get_mailboxes %}{% if mbox.id != directory.id %}
+					<span class="mbox">{{ mbox }}</span>
+					{% endif %}{% endfor %}
+				{{ thread.subject|default:"No subject" }}
+        <span class="date">{{ thread.last_date|hour_or_date }}</span>
+        {% if thread.attachment %}<img class="attachment" src="{{ MEDIA_URL }}img/attach.png" alt="paperclip"/>{% endif %}
       </a>
     </li>
-    {% endwith %}
     {% empty %}
     <li>{% trans 'Hooray, no message here' %}!</li>
     {% endfor %}

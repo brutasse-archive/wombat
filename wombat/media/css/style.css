@@ -159,9 +159,11 @@ ul#messages {
 	padding: 5px;
 	border-top: 1px solid #ddd;
 }
-#thread h2 span {
+span.mbox {
+	color: #444;
+	background-color: #fff;
 	font-weight: normal;
-	font-size: 0.5em;
+	font-size: 9px;
 	margin: 0 3px;
 	padding: 2px 3px;
 	border: 1px solid #ccc;

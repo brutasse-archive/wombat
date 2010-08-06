@@ -157,8 +157,24 @@ class Thread(Document):
         return self.messages[0].subject
 
     @property
+    def read(self):
+        return all([m.read for m in self.messages])
+
+    @property
+    def last_date(self):
+        return self.messages[-1].date
+
+    @property
     def messages_count(self):
         return len(self.messages)
+
+    @property
+    def senders(self):
+        senders = []
+        for msg in self.messages:
+            if msg.fro not in senders:
+                senders.append(msg.fro)
+        return senders
 
     def merge_with(self, other_thread):
         """
@@ -209,30 +225,6 @@ class Thread(Document):
     def get_mailboxes(self):
         from mail.models import Mailbox
         return Mailbox.objects.filter(id__in=self.mailboxes)
-
-    def get_info(self):
-        senders = set()
-        subject = ''
-        read = True
-        date = self.date
-        for m in self.messages:
-            if m.date < date:
-                date = m.date
-                subject = m.subject
-
-            if not m.read:
-                read = False
-            if not subject:
-                subject = m.subject
-            senders.add(m.fro)
-
-        return {
-            'read': read,
-            'subject': subject,
-            'senders': senders,
-            'mailboxes': self.mailboxes,
-            'date': self.date,
-        }
 
     def find_missing(self):
         """

@@ -7,7 +7,7 @@
 <div id="thread">
 	{% for message in thread.messages %}
 	{% if forloop.first %}
-	<h2>{{ message.subject|default:_("No subject") }}{% for label in thread.get_mailboxes %} <span>{{ label }}</span>{% endfor %}</h2>
+	<h2>{{ message.subject|default:_("No subject") }}{% for label in thread.get_mailboxes %} <span class="mbox">{{ label }}</span>{% endfor %}</h2>
 	{% endif %}
 	<div class="message{% if message.read and not forloop.last %} collapsed{% endif %}">
 		<div class="msg_header">{{ message.fro }} - {{ message.date|date }}</div>

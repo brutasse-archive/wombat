@@ -197,7 +197,14 @@ class Thread(Document):
 
         self.mailboxes = list(set([m.mailbox for m in self.messages]))
         if update:
-            self.save()
+            self.save(safe=True)
+
+    def ensure_unread(self, mailbox_id, message_ids, update=True):
+        for msg in self.messages:
+            unread = msg.mailbox == mailbox_id and msg.uid in message_ids
+            msg.read = not unread
+        if update:
+            self.save(safe=True)
 
     def get_mailboxes(self):
         from mail.models import Mailbox

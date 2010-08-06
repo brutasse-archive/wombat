@@ -478,6 +478,10 @@ class Mailbox(models.Model):
             messages = self.list_messages(force_uids=fetch_from_imap,
                                           connection=m)
 
+        m.select_folder(self.name)
+        unseen = m.search(['NOT SEEN'])
+        m.close_folder()
+
         if connection is None:
             m.logout()
 
@@ -519,6 +523,10 @@ class Mailbox(models.Model):
                 for thread in threads:
                     current_thread.merge_with(thread)
             current_thread.add_message(message)
+
+        threads = Thread.objects(mailboxes=self.id)
+        for t in threads:
+            t.ensure_unread(self.id, unseen)
 
     def fetch_messages(self, uids, m):
         """

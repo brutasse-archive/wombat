@@ -265,7 +265,7 @@ class Mailbox(models.Model):
 
     def get_message(self, uid):
         m = self.imap.get_connection()
-        msg = Message(uid=uid)
+        msg = Message(uids=[[self.id, uid]], uid=uid)
         msg.fetch(m, self.name)
         m.close_folder()
         m.logout()
@@ -331,6 +331,7 @@ class Mailbox(models.Model):
         messages = []
         for uid, msg in response.items():
             message = Message(uid=uid, mailbox=self.id,
+                              uids=[[self.id, uid]],
                               msg_dict=msg, update=False)
             messages.append(message)
 
@@ -451,7 +452,7 @@ class Mailbox(models.Model):
         threads = Thread.objects(mailboxes=self.id)
         for t in threads:
             for m in t.messages:
-                if m.mailbox == self.id:
+                if self.id in m.mailboxes:
                     uids.add(m.uid)
         return uids
 
@@ -521,8 +522,8 @@ class Mailbox(models.Model):
             current_thread = threads.pop()
             if len(threads) > 0:  # Merge threads
                 for thread in threads:
-                    current_thread.merge_with(thread)
-            current_thread.add_message(message)
+                    current_thread.merge_with(thread, self.id)
+            current_thread.add_message(message, self.id)
 
         threads = Thread.objects(mailboxes=self.id)
         for t in threads:

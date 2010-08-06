@@ -14,6 +14,7 @@ from mail.utils import address_struct_to_addresses, clean_header
 
 class Message(EmbeddedDocument):
     uid = IntField()
+    uids = ListField(ListField(IntField()))  # ((1, 324), ... (mbox_id, uid))
     message_id = StringField()
     in_reply_to = StringField()
     date = DateTimeField()
@@ -31,15 +32,23 @@ class Message(EmbeddedDocument):
     fetched = BooleanField(default=False)
     body = StringField()
     html_body = StringField()
-    mailbox = IntField()
 
     meta = {
-        'indexes': ['uid', 'message_id', 'in_reply_to', 'date'],
+        'indexes': ['uid', 'uids', 'message_id', 'in_reply_to', 'date'],
         'ordering': ['date'],
     }
 
     def __unicode__(self):
         return u'%s' % self.subject
+
+    @property
+    def mailboxes(self):
+        return [m[0] for m in self.uids]
+
+    def get_uid(self, mbox_id):
+        for mbid, uid in self.uids:
+            if mbox_id == mbid:
+                return uid
 
     def __init__(self, *args, **kwargs):
         """
@@ -126,7 +135,7 @@ class Message(EmbeddedDocument):
         self.read = imapclient.SEEN in flags
 
     def assign_new_thread(self):
-        thread = Thread(date=self.date, mailboxes=[self.mailbox],
+        thread = Thread(date=self.date, mailboxes=self.mailboxes,
                         messages=[self])
         thread.save(safe=True)
 
@@ -176,7 +185,7 @@ class Thread(Document):
                 senders.append(msg.fro)
         return senders
 
-    def merge_with(self, other_thread):
+    def merge_with(self, other_thread, mbox_id):
         """
         Steal the messages stored in ``other_thread`` and delete it
         """
@@ -184,17 +193,27 @@ class Thread(Document):
             # Nothing to merge with
             return
         for msg in other_thread.messages:
-            self.add_message(msg, update=False)
+            self.add_message(msg, mbox_id, update=False)
         self.save(safe=True)
         other_thread.delete()
 
-    def add_message(self, message, update=True):
+    def add_message(self, message, mbox_id, update=True):
         """
         Appends a message to the thread and updates relevant parameters
         """
-        self.date = max(self.date, message.date)
-        self.mailboxes = list(set([m.mailbox for m in self.messages]))
-        self.messages.append(message)
+        existing = False
+        for msg in self.messages:
+            if all([msg.date == message.date,
+                    msg.fro == message.fro,
+                    msg.subject == message.subject]):
+                existing = True
+                msg.uids.append([mbox_id, message.uid])
+
+        if not existing:
+            self.date = max(self.date, message.date)
+            self.messages.append(message)
+
+        self.update_mailboxes()
         self.messages.sort(key=lambda m: m.date)
         if update:
             self.save(safe=True)
@@ -202,8 +221,11 @@ class Thread(Document):
     def remove_message(self, mailbox_id, message_ids, update=True):
         to_remove = []
         for msg in self.messages:
-            if msg.mailbox == mailbox_id and msg.uid in message_ids:
-                to_remove.append(msg)
+            if mailbox_id in msg.mailboxes and msg.uid in message_ids:
+                if len(msg.mailboxes) == 1:
+                    to_remove.append(msg)
+                else:
+                    msg.uids = [uid for uid in msg.uids if uid[0] != mailbox_id]
         for msg in to_remove:
             self.messages.remove(msg)
 
@@ -211,16 +233,23 @@ class Thread(Document):
             self.delete()
             return
 
-        self.mailboxes = list(set([m.mailbox for m in self.messages]))
+        self.update_mailboxes()
         if update:
             self.save(safe=True)
 
     def ensure_unread(self, mailbox_id, message_ids, update=True):
         for msg in self.messages:
-            unread = msg.mailbox == mailbox_id and msg.uid in message_ids
+            unread = mailbox_id in msg.mailboxes and msg.uid in message_ids
             msg.read = not unread
         if update:
             self.save(safe=True)
+
+    def update_mailboxes(self):
+        mailboxes = set()
+        for m in self.messages:
+            for mbox in m.mailboxes:
+                mailboxes.add(mbox)
+        self.mailboxes = list(mailboxes)
 
     def get_mailboxes(self):
         from mail.models import Mailbox
@@ -233,10 +262,12 @@ class Thread(Document):
         missing = {}
         for message in self.messages:
             if not message.body:
-                if message.mailbox in missing:
-                    missing[message.mailbox].append(message.uid)
+                mbox, uid = message.uids[0]
+                if mbox in missing:
+                    missing[mbox].append(uid)
                 else:
-                    missing[message.mailbox] = [message.uid]
+                    missing[mbox] = [uid]
+        print missing
         return missing
 
     def fetch_missing(self):
@@ -253,7 +284,9 @@ class Thread(Document):
         for mailbox in mailboxes:
             response = mailbox.fetch_messages(missing[mailbox.id], connection)
             for msg in self.messages:
-                if msg.mailbox == mailbox.id and msg.uid in response:
-                    msg.parse(response[msg.uid]['RFC822'])
-                    msg.update_flags(response[msg.uid]['FLAGS'])
+                if mailbox.id in msg.mailboxes:
+                    uid = msg.get_uid(mailbox.id)
+                    if uid in response:
+                        msg.parse(response[uid]['RFC822'])
+                        msg.update_flags(response[uid]['FLAGS'])
         self.save(safe=True)

@@ -118,9 +118,6 @@ def message(request, mbox_id, uid):
         return redirect(reverse('directory', args=[mbox_id]))
 
     thread.fetch_missing()
-    if not thread.read:
-        thread.mark_as_read()
-
     context = {
         'directory': mailbox,
         'thread': thread,
@@ -128,7 +125,10 @@ def message(request, mbox_id, uid):
         'unread_form': ActionForm('unread'),
         'delete_form': ActionForm('delete'),
     }
-    return render(request, 'message.html', context)
+    response = render(request, 'message.html', context)
+    if not thread.read:
+        thread.mark_as_read()
+    return response
 
 
 @login_required

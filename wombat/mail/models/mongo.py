@@ -130,9 +130,6 @@ class Message(EmbeddedDocument):
         self.body = body
         #self.html_body = html_body
 
-    def update_flags(self, flags):
-        self.read = imapclient.SEEN in flags
-
     def assign_new_thread(self):
         thread = Thread(date=self.date, mailboxes=self.mailboxes,
                         messages=[self])
@@ -293,7 +290,6 @@ class Thread(Document):
                     uid = msg.get_uid(mailbox.id)
                     if uid in response:
                         msg.parse(response[uid]['RFC822'])
-                        msg.update_flags(response[uid]['FLAGS'])
         self.save(safe=True)
 
     def mark_as_read(self):

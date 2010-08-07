@@ -295,3 +295,28 @@ class Thread(Document):
                         msg.parse(response[uid]['RFC822'])
                         msg.update_flags(response[uid]['FLAGS'])
         self.save(safe=True)
+
+    def mark_as_read(self):
+        from mail.models import Mailbox
+        to_mark = {}
+        for msg in self.messages:
+            if msg.read:
+                continue
+            msg.read = True
+            for mbox_id, uid in msg.uids:
+                if mbox_id in to_mark:
+                    to_mark[mbox_id].append(uid)
+                else:
+                    to_mark[mbox_id] = [uid]
+        if not to_mark:
+            return
+
+        mailboxes = Mailbox.objects.filter(id__in=to_mark.keys())
+        connection = mailboxes[0].imap.get_connection()
+        for mailbox in mailboxes:
+            uids = ','.join(map(str, to_mark[mailbox.id]))
+            connection.select_folder(mailbox.name)
+            connection.add_flags(uids, imapclient.SEEN)
+            connection.close_folder()
+        connection.logout()
+        self.save(safe=True)

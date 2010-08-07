@@ -112,6 +112,8 @@ def message(request, account_slug, mbox_id, uid):
 
     thread = Thread.objects(id=uid)[0]
     thread.fetch_missing()
+    if not thread.read:
+        thread.mark_as_read()
 
     context = {
         'directory': directory,

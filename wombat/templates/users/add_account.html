@@ -13,7 +13,9 @@
     {{ imap.as_p }}
     <h2>SMTP settings</h2>
     {{ smtp.as_p }}
-    <p><label>&nbsp;</label><input type="submit" value="{% trans 'Save Changes' %}" /></p>
+    <p><label>&nbsp;</label><input type="submit" value="{% trans 'Save' %}" />
+    | <a href="{% url accounts %}">Back</a>
+    </p>
   </form>
 </div>
 {% endblock %}

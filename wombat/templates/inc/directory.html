@@ -13,13 +13,15 @@
   http://blog.elsdoerfer.name/2008/01/22/recursion-in-django-templates/
   Passing the filename as a variable enables recursion
   {% endcomment %}
-  {% with "inc/directory.html" as filename %}
-  {% with dir.children.all as directories %}
-  {% if directories %}
-  {% include filename %}
+  {% if dir.has_children %}
+    {% with "inc/directory.html" as filename %}
+      {% with dir.children.all as directories %}
+        {% if directories %}
+          {% include filename %}
+        {% endif %}
+      {% endwith %}
+    {% endwith %}
   {% endif %}
-  {% endwith %}
-  {% endwith %}
   </li>
   {% endfor %}
 </ul>

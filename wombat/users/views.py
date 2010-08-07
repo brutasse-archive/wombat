@@ -6,6 +6,7 @@ from django.contrib.auth import views as auth_views
 from django.core.urlresolvers import reverse
 from django.db import transaction
 from django.shortcuts import redirect, get_object_or_404
+from django.utils.translation import ugettext as _
 
 from shortcuts import render
 from users.forms import AccountForm, ProfileForm, IMAPForm, SMTPForm
@@ -41,7 +42,7 @@ def settings(request):
         form = ProfileForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Your settings have been updated')
+            messages.success(request, _('Your settings have been updated'))
             return redirect(reverse('default_inbox'))
         else:
             # TODO: handle correctly the error and translate the message
@@ -72,33 +73,30 @@ def del_account(request, id):
 @transaction.commit_on_success
 def add_account(request):
     if request.method == 'POST':
-        acnt_form = AccountForm(data=request.POST)
+        account_form = AccountForm(data=request.POST)
         smtp_form = SMTPForm(data=request.POST, prefix='smtp')
         imap_form = IMAPForm(data=request.POST, prefix='imap')
-        if all([form.is_valid() for form in (acnt_form, smtp_form, imap_form)]):
-            imap = imap_form.save(commit=False)
-            success = imap.check_credentials()
-            if success:
-                # Create an Account, attach it an IMAP and an SMTP instance.
-                account = acnt_form.save(commit=False)
-                account.profile = request.user.get_profile()
-                account.imap = imap_form.save()
-                account.smtp = smtp_form.save()
-                account.save()
-                return redirect(reverse('edit_account', args=[account.id]))
-
-            context = {'acnt': acnt_form, 'imap': imap_form,
-                       'smtp': smtp_form, 'success': success, 'submitted': True}
-        else:
-            context = {'acnt': acnt_form, 'imap': imap_form,
-                       'smtp': smtp_form}
-
+        if all([form.is_valid() for form in (account_form,
+                                             smtp_form,
+                                             imap_form)]):
+            # Create an Account, attach it an IMAP and an SMTP instance.
+            account = account_form.save(commit=False)
+            account.profile = request.user.get_profile()
+            account.imap = imap_form.save()
+            account.smtp = smtp_form.save()
+            account.save()
+            messages.success(request, _('Your account has been successfully '
+                                       'created'))
+            return redirect(reverse('edit_account', args=[account.id]))
     else:
-        acnt_form = AccountForm()
+        account_form = AccountForm()
         smtp_form = SMTPForm(prefix='smtp')
         imap_form = IMAPForm(prefix='imap')
-        context = {'acnt': acnt_form, 'imap': imap_form, 'smtp': smtp_form}
-
+    context = {
+        'account': account_form,
+        'imap': imap_form,
+        'smtp': smtp_form
+    }
     return render(request, 'users/add_account.html', context)
 
 

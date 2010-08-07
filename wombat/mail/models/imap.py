@@ -59,7 +59,7 @@ class IMAP(models.Model):
 
     # A way to tell the user that his account is well configured or
     # something is wrong.
-    healthy = models.BooleanField(_('Healthy account'), default=False)
+    healthy = models.BooleanField(_('Healthy account'), default=True)
 
     def __unicode__(self):
         return u'%s imap' % self.account
@@ -86,27 +86,6 @@ class IMAP(models.Model):
             return m
         except imapclient.IMAPClient.Error:
             return
-
-    def check_credentials(self):
-        """
-        Tries to authenticate to the configured IMAP server.
-
-        This method alters the ``healthy`` attribute, settings it to True if
-        the authentication is successful.
-
-        The ``healthy`` attribute should therefore be checked before attemting
-        to download anything from the IMAP server.
-        """
-        ssl = self.port == 993
-        m = imapclient.IMAPClient(self.server, port=self.port, ssl=ssl)
-        try:
-            m.login(self.username, self.password)
-            self.healthy = True
-        except imapclient.IMAPClient.Error:
-            self.healthy = False
-
-        m.logout()
-        return self.healthy
 
     def check_mail(self, connection=None):
         """

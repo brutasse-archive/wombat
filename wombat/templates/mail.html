@@ -38,7 +38,7 @@
     {% if unified %}
       <a href="{% url check_directory %}">Refresh</a>
     {% else %}
-      <a href="{% url check_directory directory.imap.account.slug directory.id %}">Refresh</a>
+      <a href="{% url check_directory directory.id %}">Refresh</a>
     {% endif %}
     {% include "inc/messagecount.html" %}
   </div>

@@ -320,3 +320,42 @@ class Thread(Document):
             connection.close_folder()
         connection.logout()
         self.save(safe=True)
+
+    def move_to(self, destination):
+        from mail.models import Mailbox
+        to_move = {}
+        to_delete = {}
+        for msg in self.messages:
+            mbox_id, uid = msg.uids[0]
+            if mbox_id in to_move:
+                to_move[mbox_id].append(uid)
+            else:
+                to_move[mbox_id] = [uid]
+
+            for mbox_id, uid in msg.uids[1:]:
+                if mbox_id in to_delete:
+                    to_delete[mbox_id].append(uid)
+                else:
+                    to_delete[mbox_id] = [uid]
+        mailboxes = Mailbox.objects.filter(id__in=to_move.keys())
+        connection = mailboxes[0].imap.get_connection()
+        for mailbox in mailboxes:
+            uids = ','.join(map(str, to_move[mailbox.id]))
+            connection.select_folder(mailbox.name)
+            connection.copy(uids, destination)
+            connection.add_flags(uids, imapclient.DELETED)
+            connection.expunge()
+            connection.close_folder()
+
+        mailboxes = Mailbox.objects.filter(id__in=to_delete.keys())
+        for mailbox in mailboxes:
+            uids = ','.join(map(str, to_delete[mailbox.id]))
+            connection.select_folder(mailbox.name)
+            connection.add_flags(uids, imapclient.DELETED)
+            connection.expunge()
+            connection.close_folder()
+
+        mailboxes = Mailbox.objects.filter(id__in=to_delete.keys()+to_move.keys())
+        for mailbox in mailboxes:
+            mailbox.update_messages(connection)
+        connection.logout()

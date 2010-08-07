@@ -57,7 +57,7 @@ def compose(request):
 
 
 @login_required
-def directory(request, account_slug, mbox_id, page=1):
+def directory(request, mbox_id, page=1):
     mbox_id = int(mbox_id)
     page = int(page)
 
@@ -78,10 +78,10 @@ def directory(request, account_slug, mbox_id, page=1):
     }
     if total > end:
         context['next_url'] = reverse('directory',
-                                      args=[account_slug, mbox_id, page+1])
+                                      args=[mbox_id, page+1])
     if page > 1:
         context['previous_url'] = reverse('directory',
-                                          args=[account_slug, mbox_id, page-1])
+                                          args=[mbox_id, page-1])
     return render(request, 'mail.html', context)
 
 
@@ -90,32 +90,33 @@ def message(request, mbox_id, uid):
     profile = request.user.get_profile()
     mailbox = profile.get_directory(mbox_id)
     mbox_id = mailbox.id
+    thread = Thread.objects.get(id=uid)
+    if mbox_id not in thread.mailboxes:
+        raise Http404
 
     if request.method == 'POST':
-
+        mailboxes = Mailbox.objects.filter(imap=mailbox.imap)
         action = request.POST.get('action', None)
         if action == 'unread':
             directory.unread_message(uid)
 
         if action == 'delete':
             directory.delete_message(uid)
-            messages.succes(request,
-                            'The conversation has been successfully deleted')
+            messages.succes(request, _('The conversation has been ',
+                                       'successfully deleted'))
 
         if action == 'move':
-            form = MoveForm(directory.imap, data=request.POST)
+            form = MoveForm(mailbox.imap, data=request.POST)
             if form.is_valid():
-                dest = directory.imap.directories.get(pk=form.cleaned_data['destination'])
-                directory.move_message(uid, dest.name)
-                messages.success(request, 'The conversation has been successfully moved to "%s"' % dest.name)
+                dest = mailboxes.get(pk=form.cleaned_data['destination'])
+                thread.move_to(dest.name)
+                messages.success(request, _('The conversation has been '
+                                            'successfully moved to '
+                                            '"%s"' % dest.name))
             else:
-                messages.error(request, 'Unable to move the conversation')
-                pass
-        return redirect(reverse('directory', args=[account_slug, mbox_id]))
+                messages.error(request, _('Unable to move the conversation'))
+        return redirect(reverse('directory', args=[mbox_id]))
 
-    thread = Thread.objects(id=uid)[0]
-    if mbox_id not in thread.mailboxes:
-        raise Http404
     thread.fetch_missing()
     if not thread.read:
         thread.mark_as_read()
@@ -142,19 +143,18 @@ def check_mail(request):
 
 
 @login_required
-def check_directory(request, account_slug=None, mbox_id=None):
+def check_directory(request, mbox_id=None):
     profile = request.user.get_profile()
-    if account_slug is None:
-        accounts = get_list_or_404(IMAP, account__profile=profile)
+    accounts = get_list_or_404(IMAP, account__profile=profile)
+
+    if mbox_id is None:
         directories = Mailbox.objects.filter(imap__in=accounts,
                                              folder_type=INBOX)
         url = reverse('inbox')
     else:
         mbox_id = int(mbox_id)
-        account = get_object_or_404(IMAP, account__slug=account_slug,
-                                    account__profile=profile)
-        directories = [account.directories.get(pk=mbox_id)]
-        url = reverse('directory', args=[account_slug, mbox_id])
+        directories = Mailbox.objects.filter(imap__in=accounts, pk=mbox_id)
+        url = reverse('directory', args=[mbox_id])
 
     for directory in directories:
         directory.update_messages()

@@ -21,6 +21,11 @@ a:hover {color: #f17912;}
 h1 a, h2 a {color: inherit;}
 h1 a:hover, h2 a:hover {color: inherit;}
 
+h1, h2, h3 {
+	font-weight: normal;
+	font-family: Helvetica, Arial, sans-serif;
+}
+
 #header {padding: .5em 1em; border-bottom: 1px solid #959596;}
 #header form, #header p {margin: 0; padding: 0;}
 #content {padding: 1em 2em;}
@@ -49,7 +54,7 @@ h2.title {
 }
 
 #login-form {top: 60px; position: relative;}
-label {display: block; padding: 3px 10px 0 10px; float: left; width: 70px;}
+label {display: block; padding: 3px 10px 0 10px; float: left; width: 100px;}
 input[type=password], input[type=text] {width: 140px;}
 
 /**
@@ -92,6 +97,12 @@ ul.errorlist {
 
 .panel .inline {display: inline-block;}
 .clear {clear: both;}
+
+.panel h1, .panel h2, .panel h3 {
+	padding: 0.4em 0.2em 0.2em 0.2em;
+	margin: 0;
+}
+.panel p { margin: 0; padding: 5px 0; }
 
 /*
  * Menu
@@ -162,7 +173,6 @@ ul#messages {
 span.mbox {
 	color: #444;
 	background-color: #fff;
-	font-weight: normal;
 	font-size: 9px;
 	margin: 0 3px;
 	padding: 2px 3px;

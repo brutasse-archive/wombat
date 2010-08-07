@@ -14,6 +14,7 @@ from mail.forms import MailForm, ActionForm, MoveForm
 
 @login_required
 def inbox(request, account_slug=None, page=1):
+    page = int(page)
     profile = request.user.get_profile()
     accounts = profile.accounts.all()
     if account_slug is not None:
@@ -24,19 +25,27 @@ def inbox(request, account_slug=None, page=1):
                                  'fill in the form below'))
         return redirect(reverse('add_account'))
 
-    begin = (page - 1) * 50
-    end = begin + 50
-
     inboxes = Mailbox.objects.filter(imap__account__in=accounts,
                                      folder_type=INBOX).values_list('id',
                                                                     flat=True)
+    total = Thread.objects(mailboxes__in=inboxes).count()
+    begin = (page - 1) * 50
+    end = min(total, begin + 50)
+
     threads = Thread.objects(mailboxes__in=inboxes)[begin:end]
     directory = profile.get_directory(inboxes[0])
     context = {
         'unified': True,
         'directory': directory,
         'threads': threads,
+        'begin': begin + 1,
+        'end': end,
+        'total': total,
     }
+    if total > end:
+        context['next_url'] = reverse('inbox', args=[page+1])
+    if page > 1:
+        context['previous_url'] = reverse('inbox', args=[page-1])
     return render(request, 'mail.html', context)
 
 
@@ -49,8 +58,11 @@ def compose(request):
 @login_required
 def directory(request, account_slug, mbox_id, page=1):
     mbox_id = int(mbox_id)
+    page = int(page)
+
+    total = Thread.objects(mailboxes=mbox_id).count()
     begin = (page - 1) * 50
-    end = begin + 50
+    end = min(total, begin + 50)
 
     threads = Thread.objects(mailboxes=mbox_id)[begin:end]
     # Filter with user profile to be sure you are looking at your mails !
@@ -59,7 +71,16 @@ def directory(request, account_slug, mbox_id, page=1):
     context = {
         'directory': directory,
         'threads': threads,
+        'begin': begin + 1,
+        'end': end,
+        'total': total,
     }
+    if total > end:
+        context['next_url'] = reverse('directory',
+                                      args=[account_slug, mbox_id, page+1])
+    if page > 1:
+        context['previous_url'] = reverse('directory',
+                                          args=[account_slug, mbox_id, page-1])
     return render(request, 'mail.html', context)
 
 

@@ -1,3 +1,9 @@
 <span class="messagecount">
-  <b>1 - {{ threads|length }}</b> of <b>{{ directory.total }}</b>
+  {% if previous_url %}
+  <a href="{{ previous_url }}">&lsaquo; Newer</a>
+  {% endif %}
+  <b>{{ begin }} - {{ end }}</b> of <b>{{ total }}</b>
+  {% if next_url %}
+  <a href="{{ next_url }}">Older &rsaquo;</a>
+  {% endif %}
 </span>

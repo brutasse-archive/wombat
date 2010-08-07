@@ -3,7 +3,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, get_list_or_404, redirect
 from django.utils.translation import ugettext as _
 
 from shortcuts import render
@@ -44,9 +44,8 @@ def inbox(request, account_slug=None, page=1):
 @login_required
 @account_required
 def compose(request):
-    err = ''
     form = MailForm(request.user)
-    return render(request, 'compose.html', {'form': form, 'err_msg': err})
+    return render(request, 'compose.html', {'form': form})
 
 
 @login_required
@@ -109,13 +108,14 @@ def message(request, account_slug, mbox_id, uid):
 
 @login_required
 @account_required
-def check_mail(request, account_slug):
-    imap = get_object_or_404(IMAP, account__slug=account_slug,
-                             account__profile=request.user.get_profile())
-    imap.check_mail()
+def check_mail(request):
+    profile = request.user.get_profile()
+    accounts = get_list_or_404(IMAP, account__profile=profile)
 
+    for account in accounts:
+        account.check_mail()
     # TODO make sure the 'from' field is safe
-    return redirect(request.GET.get('from', reverse('default_inbox')))
+    return redirect(request.GET.get('from', reverse('inbox')))
 
 
 def check_directory(request, account_slug, mbox_id):

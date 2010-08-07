@@ -5,10 +5,10 @@ mbox = '(?P<mbox_id>\d+)'
 msg = '(?P<uid>[a-f0-9]{24})'
 
 urlpatterns = patterns('mail.views',
-    url(r'^$', 'inbox', name='default_inbox'),
+    url(r'^$', 'inbox', name='inbox'),
+    url(r'^check/$', 'check_mail', name='check_mail'),
     url(r'^compose/$', 'compose', name='compose'),
     url(r'^%(account)s/$' % locals(), 'inbox', name='account_inbox'),
-    url(r'^%(account)s/check/$' % locals(), 'check_mail', name='check_mail'),
     url(r'^%(account)s/%(mbox)s/$' % locals(), 'directory', name='directory'),
 
     url(r'^%(account)s/%(mbox)s/check/$' % locals(),

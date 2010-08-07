@@ -5,7 +5,7 @@
   {% if dir.no_select %}
   {{ dir }}
   {% else %}
-  <a href="{% url directory account.slug dir.id %}">
+  <a href="{% url directory dir.id %}">
     {{ dir|numberize:"unread" }}
   </a>
   {% endif %}

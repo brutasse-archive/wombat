@@ -46,7 +46,7 @@
     {% for thread in threads %}
     <li{% if not thread.read %} class="new"{% endif %}>
       <input type="checkbox" name="m_{{ thread.id }}" />
-      <a href="{% url message directory.imap.account.slug directory.id thread.id %}">
+      <a href="{% url message thread.mailboxes.0 thread.id %}">
         <span class="from">{{ thread.senders|from }}
           {% if thread.messages_count > 1 %}({{ thread.messages_count }}){% endif %}
         </span>
@@ -79,13 +79,13 @@
 
 {% for account in user.get_profile.accounts.all %}
 {% if forloop.first %}
-<h2><a href="{% url inbox %}">Mail</a></h2>
+<h2><a class="block" href="{% url inbox %}">Mail</a></h2>
 <ul>
   <li><a href="{% url check_mail %}?from={{ request.get_full_path }}">Check mail</a></li>
   <li><a href="{% url compose %}">Compose</a></li>
 </ul>
 {% endif %}
-<h2><a href="{% url account_inbox account.slug %}">{{ account.name }}</a></h2>
+<h2>{{ account.name }}</h2>
 
 {% with account.common_directories as directories %}
 {% include "inc/directory.html" %}

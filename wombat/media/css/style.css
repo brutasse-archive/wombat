@@ -97,6 +97,7 @@ ul.errorlist {
   border-radius: 3px; /* CSS 3 */
   -moz-border-radius: 3px;
   -webkit-border-radius: 3px;
+  background-color: #fafafa;
 }
 
 .panel .inline {display: inline-block;}
@@ -116,6 +117,7 @@ li.unread ul {font-weight: normal;}
  * Mail list
  */
 
+.block {display: block;}
 .messagecount {float: right;}
 
 ul#messages {

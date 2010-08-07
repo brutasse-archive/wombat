@@ -3,6 +3,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.http import Http404
 from django.shortcuts import get_object_or_404, get_list_or_404, redirect
 from django.utils.translation import ugettext as _
 
@@ -85,10 +86,13 @@ def directory(request, account_slug, mbox_id, page=1):
 
 
 @login_required
-def message(request, account_slug, mbox_id, uid):
-    directory = request.user.get_profile().get_directory(mbox_id)
+def message(request, mbox_id, uid):
+    profile = request.user.get_profile()
+    mailbox = profile.get_directory(mbox_id)
+    mbox_id = mailbox.id
 
     if request.method == 'POST':
+
         action = request.POST.get('action', None)
         if action == 'unread':
             directory.unread_message(uid)
@@ -107,18 +111,19 @@ def message(request, account_slug, mbox_id, uid):
             else:
                 messages.error(request, 'Unable to move the conversation')
                 pass
-
         return redirect(reverse('directory', args=[account_slug, mbox_id]))
 
     thread = Thread.objects(id=uid)[0]
+    if mbox_id not in thread.mailboxes:
+        raise Http404
     thread.fetch_missing()
     if not thread.read:
         thread.mark_as_read()
 
     context = {
-        'directory': directory,
+        'directory': mailbox,
         'thread': thread,
-        'move_form': MoveForm(directory.imap, exclude=directory),
+        'move_form': MoveForm(mailbox.imap, exclude=directory),
         'unread_form': ActionForm('unread'),
         'delete_form': ActionForm('delete'),
     }

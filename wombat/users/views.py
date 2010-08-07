@@ -117,7 +117,7 @@ def edit_account(request, id):
             imap_form.save()
             smtp_form.save()
             messages.success(request, _('Your account have been successfully'
-                                        'updated.'))
+                                        ' updated.'))
             return redirect(reverse('accounts'))
     else:
         account_form = AccountForm(instance=account)

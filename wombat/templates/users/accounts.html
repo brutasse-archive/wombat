@@ -4,18 +4,18 @@
 {% block title %}Wombat | {% trans 'Accounts' %}{% endblock %}
 
 {% block form %}
-	<div class="form">
-    {% csrf_token %}
-		<ul>
-            {% for a in accounts %}
-            <li>{{ a }}
-                <a href="{% url edit_account a.id %}">edit</a>
-                <a href="{% url del_account a.id %}">delete</a>
-            </li>
-			{% empty %}
-			<li>You don't have any account yet</li>
-			{% endfor %}
-		</ul>
-		<p><a href="{% url add_account %}">Add an account</a></p>
-  </div>
+<h1>Accounts</h1>
+{% for account in accounts %}
+	<h2>{{ account }}</h2>
+	<ul>
+		<li>{{ account.email }}</li>
+		<li>
+			<a href="{% url edit_account account.id %}">Edit</a> -
+			<a href="{% url del_account account.id %}">Delete</a>
+		</li>
+	</ul>
+{% empty %}
+<p>You don't have any account yet</p>
+{% endfor %}
+<p><a href="{% url add_account %}">Add an account</a></p>
 {% endblock %}

@@ -7,7 +7,6 @@ from django.shortcuts import get_object_or_404, get_list_or_404, redirect
 from django.utils.translation import ugettext as _
 
 from shortcuts import render
-from decorators import account_required
 
 from mail.models import IMAP, Mailbox, Thread, INBOX
 from mail.forms import MailForm, ActionForm, MoveForm
@@ -42,14 +41,12 @@ def inbox(request, account_slug=None, page=1):
 
 
 @login_required
-@account_required
 def compose(request):
     form = MailForm(request.user)
     return render(request, 'compose.html', {'form': form})
 
 
 @login_required
-@account_required
 def directory(request, account_slug, mbox_id, page=1):
     mbox_id = int(mbox_id)
     begin = (page - 1) * 50
@@ -67,7 +64,6 @@ def directory(request, account_slug, mbox_id, page=1):
 
 
 @login_required
-@account_required
 def message(request, account_slug, mbox_id, uid):
     directory = request.user.get_profile().get_directory(mbox_id)
 
@@ -107,7 +103,6 @@ def message(request, account_slug, mbox_id, uid):
 
 
 @login_required
-@account_required
 def check_mail(request):
     profile = request.user.get_profile()
     accounts = get_list_or_404(IMAP, account__profile=profile)

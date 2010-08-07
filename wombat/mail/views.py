@@ -118,10 +118,21 @@ def check_mail(request):
     return redirect(request.GET.get('from', reverse('inbox')))
 
 
-def check_directory(request, account_slug, mbox_id):
-    mbox_id = int(mbox_id)
-    imap = get_object_or_404(IMAP, account__slug=account_slug,
-                             account__profile=request.user.get_profile())
-    directory = imap.directories.get(pk=mbox_id)
-    directory.update_messages()
-    return redirect(reverse('directory', args=[account_slug, mbox_id]))
+@login_required
+def check_directory(request, account_slug=None, mbox_id=None):
+    profile = request.user.get_profile()
+    if account_slug is None:
+        accounts = get_list_or_404(IMAP, account__profile=profile)
+        directories = Mailbox.objects.filter(imap__in=accounts,
+                                             folder_type=INBOX)
+        url = reverse('inbox')
+    else:
+        mbox_id = int(mbox_id)
+        account = get_object_or_404(IMAP, account__slug=account_slug,
+                                    account__profile=profile)
+        directories = [account.directories.get(pk=mbox_id)]
+        url = reverse('directory', args=[account_slug, mbox_id])
+
+    for directory in directories:
+        directory.update_messages()
+    return redirect(url)

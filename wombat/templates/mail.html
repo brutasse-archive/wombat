@@ -35,7 +35,11 @@
 {% block panel %}
   <div class="actions">
     Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
-    <a href="{% url check_directory directory.imap.account.slug directory.id %}">Update</a>
+    {% if unified %}
+      <a href="{% url check_directory %}">Refresh</a>
+    {% else %}
+      <a href="{% url check_directory directory.imap.account.slug directory.id %}">Refresh</a>
+    {% endif %}
     {% include "inc/messagecount.html" %}
   </div>
   <ul id="messages">

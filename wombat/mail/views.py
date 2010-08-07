@@ -4,24 +4,41 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404, redirect
+from django.utils.translation import ugettext as _
 
 from shortcuts import render
 from decorators import account_required
 
-from mail.models import INBOX, IMAP, Message, Thread
+from mail.models import IMAP, Mailbox, Thread, INBOX
 from mail.forms import MailForm, ActionForm, MoveForm
 
 
 @login_required
-@account_required
-def inbox(request, account_slug=None):
-    accounts = request.user.get_profile().accounts.all()
-    if account_slug is None:
-        account = accounts[0]
-    else:
-        account = accounts.get(slug=account_slug)
-    inbox = account.imap.directories.get(folder_type=INBOX)
-    return directory(request, account.slug, inbox.id)
+def inbox(request, account_slug=None, page=1):
+    profile = request.user.get_profile()
+    accounts = profile.accounts.all()
+    if account_slug is not None:
+        accounts = [accounts.get(slug=account_slug)]
+
+    if not accounts:
+        messages.info(request, _('You don\'t have any account yet, please '
+                                 'fill in the form below'))
+        return redirect(reverse('add_account'))
+
+    begin = (page - 1) * 50
+    end = begin + 50
+
+    inboxes = Mailbox.objects.filter(imap__account__in=accounts,
+                                     folder_type=INBOX).values_list('id',
+                                                                    flat=True)
+    threads = Thread.objects(mailboxes__in=inboxes)[begin:end]
+    directory = profile.get_directory(inboxes[0])
+    context = {
+        'unified': True,
+        'directory': directory,
+        'threads': threads,
+    }
+    return render(request, 'mail.html', context)
 
 
 @login_required

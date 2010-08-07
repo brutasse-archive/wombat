@@ -23,9 +23,9 @@
   </span>
 </div> <!-- #header -->
 {% if messages %}<div id="messages">{% for message in messages %}
-	<div class="msg {{ message.tags }}">
-		{{ message }}
-	</div>{% endfor %}
+  <div class="msg {{ message.tags }}">
+    {{ message }}
+  </div>{% endfor %}
 </div>{% endif %}
 {% endblock %}
 
@@ -33,11 +33,11 @@
 
 <div class="panel">
 {% block panel %}
-	<div class="actions">
-		Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
-		<a href="{% url check_directory directory.imap.account.slug directory.id %}">Update</a>
-		{% include "inc/messagecount.html" %}
-	</div>
+  <div class="actions">
+    Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
+    <a href="{% url check_directory directory.imap.account.slug directory.id %}">Update</a>
+    {% include "inc/messagecount.html" %}
+  </div>
   <ul id="messages">
     {% for thread in threads %}
     <li{% if not thread.read %} class="new"{% endif %}>
@@ -46,10 +46,18 @@
         <span class="from">{{ thread.senders|from }}
           {% if thread.messages_count > 1 %}({{ thread.messages_count }}){% endif %}
         </span>
-				{% for mbox in thread.get_mailboxes %}{% if mbox.id != directory.id %}
-					<span class="mbox">{{ mbox }}</span>
-					{% endif %}{% endfor %}
-				{{ thread.subject|default:"No subject" }}
+        {% for mbox in thread.get_mailboxes %}
+          {% if unified %}
+            {% if mbox.folder_type != 10 %}
+              <span class="mbox">{{ mbox }}</span>
+            {% endif %}
+          {% else %}
+            {% if mbox.id != directory.id %}
+              <span class="mbox">{{ mbox }}</span>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+        {{ thread.subject|default:"No subject" }}
         <span class="date">{{ thread.last_date|hour_or_date }}</span>
         {% if thread.attachment %}<img class="attachment" src="{{ MEDIA_URL }}img/attach.png" alt="paperclip"/>{% endif %}
       </a>
@@ -58,10 +66,10 @@
     <li>{% trans 'Hooray, no message here' %}!</li>
     {% endfor %}
   </ul>
-	<div class="actions">
-  	Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
-	  {% include "inc/messagecount.html" %}
-	</div>
+  <div class="actions">
+    Select: <a>All, None, Read, Unread, Starred, Unstarred</a>
+    {% include "inc/messagecount.html" %}
+  </div>
 {% endblock %}
 </div>
 

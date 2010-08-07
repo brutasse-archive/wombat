@@ -15,7 +15,7 @@ class SMTP(models.Model):
     # Are we actually able to connect to this server?
     # There should be some check, try to connect to the server when the
     # configuration is altered.
-    healthy = models.BooleanField(_('Healthy'), default=False)
+    healthy = models.BooleanField(_('Healthy'), default=True)
 
     def __unicode__(self):
         return u'%s smtp' % self.account

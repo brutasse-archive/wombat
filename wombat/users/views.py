@@ -103,34 +103,31 @@ def add_account(request):
 @login_required
 @transaction.commit_on_success
 def edit_account(request, id):
-    a = get_object_or_404(Account, id=id)
+    account = get_object_or_404(Account, id=id)
 
     if request.method == 'POST':
-        acnt_form = AccountForm(data=request.POST, instance=a)
-        smtp_form = SMTPForm(data=request.POST, prefix='smtp', instance=a.smtp)
-        imap_form = IMAPForm(data=request.POST, prefix='imap', instance=a.imap)
-        if all([form.is_valid() for form in (acnt_form, smtp_form, imap_form)]):
-            smtp_form.save(commit=False)
-            imap = imap_form.save(commit=False)
-
-            success = imap.check_credentials()
-            if success:
-                smtp_form.save()
-                imap_form.save()
-                a = acnt_form.save()
-
-            context = {'account': a, 'acnt': acnt_form, 'imap': imap_form,
-                       'smtp': smtp_form, 'success': success, 'submitted': True}
-        else:
-            context = {'account': a, 'acnt': acnt_form, 'imap': imap_form,
-                       'smtp': smtp_form}
-
+        account_form = AccountForm(data=request.POST, instance=account)
+        smtp_form = SMTPForm(data=request.POST, prefix='smtp',
+                             instance=account.smtp)
+        imap_form = IMAPForm(data=request.POST, prefix='imap',
+                             instance=account.imap)
+        if all([form.is_valid() for form in (account_form, smtp_form,
+                                             imap_form)]):
+            account_form.save()
+            imap_form.save()
+            smtp_form.save()
+            messages.success(request, _('Your account have been successfully'
+                                        'updated.'))
+            return redirect(reverse('accounts'))
     else:
-        acnt_form = AccountForm(instance=a)
-        smtp_form = SMTPForm(prefix='smtp', instance=a.smtp)
-        imap_form = IMAPForm(prefix='imap', instance=a.imap)
+        account_form = AccountForm(instance=account)
+        smtp_form = SMTPForm(prefix='smtp', instance=account.smtp)
+        imap_form = IMAPForm(prefix='imap', instance=account.imap)
 
-        context = {'account': a, 'acnt': acnt_form, 'imap': imap_form,
-                   'smtp': smtp_form}
-
+    context = {
+        'account': account,
+        'account_form': account_form,
+        'imap': imap_form,
+        'smtp': smtp_form
+    }
     return render(request, 'users/edit_account.html', context)

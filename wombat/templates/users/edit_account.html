@@ -8,13 +8,7 @@
   <form action="{% url edit_account account.id %}" method="post">
     {% csrf_token %}
     <h1>{% trans 'Edit' %} {{ account }}</h1>
-    {% if submitted and success %}
-    <p>{% trans 'Your account has been successfully modified' %}</p>
-    {% endif %}
-    {% if submitted and not success %}
-    <p>{% trans 'An error has been encountered while checking your credentials. Please double check and try again' %}</p>
-    {% endif %}
-    {{ acnt.as_p }}
+    {{ account_form.as_p }}
     <h2>IMAP settings</h2>
     {{ imap.as_p }}
     <h2>SMTP settings</h2>

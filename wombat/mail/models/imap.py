@@ -263,19 +263,6 @@ class Mailbox(models.Model):
             return self.name.replace(self.parent.name + '/', '')
         return self.name
 
-    def get_message(self, uid):
-        m = self.imap.get_connection()
-        msg = Message(uids=[[self.id, uid]], uid=uid)
-        msg.fetch(m, self.name)
-        m.close_folder()
-        m.logout()
-        return msg
-
-    def get_messages(self, page):
-        number_of_messages = min(self.total, 50)
-        messages = self.list_messages(number_of_messages=number_of_messages)
-        return messages
-
     def list_messages(self, number_of_messages=50, offset=0, force_uids=None,
                      connection=None):
         """
@@ -330,7 +317,7 @@ class Mailbox(models.Model):
 
         messages = []
         for uid, msg in response.items():
-            message = Message(uid=uid, mailbox=self.id,
+            message = Message(mailbox=self.id,
                               uids=[[self.id, uid]],
                               msg_dict=msg, update=False)
             messages.append(message)
@@ -453,7 +440,7 @@ class Mailbox(models.Model):
         for t in threads:
             for m in t.messages:
                 if self.id in m.mailboxes:
-                    uids.add(m.uid)
+                    uids.add(m.get_uid(self.id))
         return uids
 
     def update_messages(self, connection=None):
@@ -466,8 +453,9 @@ class Mailbox(models.Model):
         imap_uids = set(self.get_uids(connection=m))
 
         remove_from_db = list(db_uids - imap_uids)
+        remove_from_db = [[self.id, uid] for uid in remove_from_db]
         threads_remove = Thread.objects(mailboxes=self.id,
-                                        messages__uid__in=remove_from_db)
+                                        messages__uids__in=remove_from_db)
         for t in threads_remove:
             t.remove_message(self.id, remove_from_db)
 

@@ -13,7 +13,6 @@ from mail.utils import address_struct_to_addresses, clean_header
 
 
 class Message(EmbeddedDocument):
-    uid = IntField()
     uids = ListField(ListField(IntField()))  # ((1, 324), ... (mbox_id, uid))
     message_id = StringField()
     in_reply_to = StringField()
@@ -34,7 +33,7 @@ class Message(EmbeddedDocument):
     html_body = StringField()
 
     meta = {
-        'indexes': ['uid', 'uids', 'message_id', 'in_reply_to', 'date'],
+        'indexes': ['uids', 'message_id', 'in_reply_to', 'date'],
         'ordering': ['date'],
     }
 
@@ -207,7 +206,7 @@ class Thread(Document):
                     msg.fro == message.fro,
                     msg.subject == message.subject]):
                 existing = True
-                msg.uids.append([mbox_id, message.uid])
+                msg.uids.append([mbox_id, message.get_uid(mbox_id)])
 
         if not existing:
             self.date = max(self.date, message.date)
@@ -219,13 +218,16 @@ class Thread(Document):
             self.save(safe=True)
 
     def remove_message(self, mailbox_id, message_ids, update=True):
+        # message_ids is already a list of (mbox_id, uid) pairs!
         to_remove = []
         for msg in self.messages:
-            if mailbox_id in msg.mailboxes and msg.uid in message_ids:
-                if len(msg.mailboxes) == 1:
-                    to_remove.append(msg)
-                else:
-                    msg.uids = [uid for uid in msg.uids if uid[0] != mailbox_id]
+            for uid in msg.uids:
+                if mailbox_id in msg.mailboxes and uid in message_ids:
+                    if len(msg.mailboxes) == 1:
+                        to_remove.append(msg)
+                    else:
+                        msg.uids = [uid for uid in msg.uids if \
+                                    uid[0] != mailbox_id]
         for msg in to_remove:
             self.messages.remove(msg)
 
@@ -239,7 +241,8 @@ class Thread(Document):
 
     def ensure_unread(self, mailbox_id, message_ids, update=True):
         for msg in self.messages:
-            unread = mailbox_id in msg.mailboxes and msg.uid in message_ids
+            unread = mailbox_id in msg.mailboxes and [mailbox_id,
+                                                      message_ids] in msg.uids
             msg.read = not unread
         if update:
             self.save(safe=True)
@@ -267,7 +270,6 @@ class Thread(Document):
                     missing[mbox].append(uid)
                 else:
                     missing[mbox] = [uid]
-        print missing
         return missing
 
     def fetch_missing(self):

@@ -38,7 +38,11 @@ def hour_or_date(datetime_instance):
 
 @register.filter('from')
 def _from(value):
-    value = list(value)
+    if len(value) == 1:
+        tokens = value[0].split(' ')
+        if len(tokens) == 1:
+            return tokens[0]
+        return ' '.join(tokens[:-1])
     if len(value) > 2:
         return ', '.join(name.split()[0] for name in value[:2]) + " ..."
     return ', '.join(name.split()[0] for name in value)

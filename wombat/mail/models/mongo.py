@@ -240,10 +240,13 @@ class Thread(Document):
             self.save(safe=True)
 
     def ensure_unread(self, mailbox_id, message_ids, update=True):
+        message_ids = [[mailbox_id, msg_id] for msg_id in message_ids]
         for msg in self.messages:
-            unread = mailbox_id in msg.mailboxes and [mailbox_id,
-                                                      message_ids] in msg.uids
-            msg.read = not unread
+            read = True
+            for uid in msg.uids:
+                if mailbox_id in msg.mailboxes and uid in message_ids:
+                    read = False
+            msg.read = read
         if update:
             self.save(safe=True)
 

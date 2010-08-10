@@ -6,7 +6,7 @@
   {{ dir }}
   {% else %}
   <a href="{% url directory dir.id %}">
-    {{ dir|numberize:"unread" }}
+    {{ dir|numberize:"unread_threads" }}
   </a>
   {% endif %}
   {% comment %}

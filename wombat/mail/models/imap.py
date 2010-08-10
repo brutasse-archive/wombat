@@ -242,6 +242,13 @@ class Mailbox(models.Model):
             return self.name.replace(self.parent.name + '/', '')
         return self.name
 
+    @property
+    def unread_threads(self):
+        if not hasattr(self, '_unread_threads'):
+            self._unread_threads = Thread.objects(mailboxes=self.id,
+                                                  messages__read=False).count()
+        return self._unread_threads
+
     def list_messages(self, number_of_messages=50, offset=0, force_uids=None,
                      connection=None):
         """
@@ -406,8 +413,16 @@ class Mailbox(models.Model):
         messages = ()
         if fetch_from_imap:
             print "Updating %s messages" % len(fetch_from_imap)
+            while len(fetch_from_imap) > 1000:
+                print "%s remaining" % len(fetch_from_imap)
+                fetch_this = fetch_from_imap[:1000]
+                fetch_from_imap = fetch_from_imap[1000:]
+                messages = self.list_messages(force_uids=fetch_this,
+                                              connection=m)
+                self.handle_new_messages(messages)
             messages = self.list_messages(force_uids=fetch_from_imap,
                                           connection=m)
+            self.handle_new_messages(messages)
 
         m.select_folder(self.name)
         unseen = m.search(['NOT SEEN'])
@@ -416,6 +431,11 @@ class Mailbox(models.Model):
         if connection is None:
             m.logout()
 
+        threads = Thread.objects(mailboxes=self.id)
+        for t in threads:
+            t.ensure_unread(self.id, unseen)
+
+    def handle_new_messages(self, messages):
         account_mailboxes = self.imap.directories.values_list('id', flat=True)
         for message in messages:
             if message.message_id is None and message.in_reply_to is None:
@@ -454,10 +474,6 @@ class Mailbox(models.Model):
                 for thread in threads:
                     current_thread.merge_with(thread, self.id)
             current_thread.add_message(message, self.id)
-
-        threads = Thread.objects(mailboxes=self.id)
-        for t in threads:
-            t.ensure_unread(self.id, unseen)
 
     def fetch_messages(self, uids, m):
         """

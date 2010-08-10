@@ -255,8 +255,9 @@ class Thread(Document):
         self.mailboxes = list(mailboxes)
 
     def get_mailboxes(self):
-        from mail.models import Mailbox
-        return Mailbox.objects.filter(id__in=self.mailboxes)
+        from mail.models import Mailbox, OUTBOX
+        mboxes = Mailbox.objects.filter(id__in=self.mailboxes)
+        return mboxes.exclude(folder_type=OUTBOX)
 
     def find_missing(self):
         """
@@ -318,7 +319,7 @@ class Thread(Document):
         self.save(safe=True)
 
     def move_to(self, destination):
-        from mail.models import Mailbox
+        from mail.models import Mailbox, NORMAL, INBOX, SPAM, TRASH
         to_move = {}
         to_delete = {}
         for msg in self.messages:
@@ -334,6 +335,9 @@ class Thread(Document):
                 else:
                     to_delete[mbox_id] = [uid]
         mailboxes = Mailbox.objects.filter(id__in=to_move.keys())
+        # Don't delete messages in OUTBOX, DRAFTS, QUEUE, OTHER...
+        mailboxes = mailboxes.filter(folder_type__in=[NORMAL, INBOX,
+                                                      SPAM, TRASH])
         connection = mailboxes[0].imap.get_connection()
         for mailbox in mailboxes:
             uids = ','.join(map(str, to_move[mailbox.id]))

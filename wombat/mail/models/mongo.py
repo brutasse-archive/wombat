@@ -190,6 +190,9 @@ class Thread(Document):
             return
         for msg in other_thread.messages:
             self.add_message(msg, mbox_id, update=False)
+        # Sanity check / rebuild if something bad happens to the uids
+        for msg in self.messages:
+            msg.uids = [uid for uid in msg.uids if uid[1] is not None]
         self.save(safe=True)
         other_thread.delete()
 

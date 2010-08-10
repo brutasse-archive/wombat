@@ -98,12 +98,14 @@ def message(request, mbox_id, uid):
         mailboxes = Mailbox.objects.filter(imap=mailbox.imap)
         action = request.POST.get('action', None)
         if action == 'unread':
-            directory.unread_message(uid)
+            thread.mark_as_unread()
+            messages.success(request, _('The conversation has been marked as'
+                                        ' new'))
 
         if action == 'delete':
-            directory.delete_message(uid)
-            messages.succes(request, _('The conversation has been ',
-                                       'successfully deleted'))
+            thread.delete_from_imap()
+            messages.success(request, _('The conversation has been '
+                                        'successfully deleted'))
 
         if action == 'move':
             form = MoveForm(mailbox.imap, data=request.POST)

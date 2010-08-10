@@ -176,7 +176,7 @@ span.mbox {
 	color: #444;
 	background-color: #fff;
 	font-size: 9px;
-	margin: 0 3px;
+	margin: 0 3px 0 0;
 	padding: 2px 3px;
 	border: 1px solid #ccc;
   border-radius: 3px; /* CSS 3 */

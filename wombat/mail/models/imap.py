@@ -373,43 +373,6 @@ class Mailbox(models.Model):
             m.logout()
         return uids
 
-    def unread_message(self, uid, connection=None):
-        if connection is None:
-            m = self.imap.get_connection()
-        else:
-            m = connection
-
-        if m is None:
-            return
-
-        m.select_folder(self.name)
-        m.remove_flags([uid], imapclient.SEEN)
-        m.close_folder()
-        if connection is None:
-            m.logout()
-
-    def move_message(self, uid, dest, connection=None):
-        if connection is None:
-            m = self.imap.get_connection()
-        else:
-            m = connection
-
-        if m is None:
-            return
-
-        m.select_folder(self.name)
-        m.copy([uid], dest)
-        m.add_flags([uid], [imapclient.DELETED])
-        m.expunge()
-        m.close_folder()
-
-        if connection is None:
-            m.logout()
-
-    def delete_message(self, uid, connection=None):
-        trash = self.imap.directories.filter(folder_type=TRASH).get()
-        return self.move_message(uid, trash.name, connection=connection)
-
     def get_uids_in_db(self):
         """
         Returns the UIDs of messages in this mailbox & stored in the DB

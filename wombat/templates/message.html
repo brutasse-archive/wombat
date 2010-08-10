@@ -1,4 +1,5 @@
 {% extends "mail.html" %}
+{% load i18n %}
 
 {% block panel %}
 <div class="actions">
@@ -13,7 +14,7 @@
 		<div class="msg_header">{{ message.fro }} - {{ message.date|date }}</div>
 		<ul class="headers">
 			<li><strong>From:</strong> {{ message.fro }}</li>
-			<li><strong>To:</strong> {{ message.to|join:", " }}</li>
+			<li><strong>To:</strong> {% if message.to %}{{ message.to|join:", " }}{% else %}{% trans "undisclosed-recipients" %}{% endif %}</li>
 			{% if message.cc %}<li><strong>Cc:</strong> {{ message.cc|join:", " }}</li>{% endif %}
 			<li><strong>Date:</strong> {{ message.date|date }}</li>
 		</ul>
